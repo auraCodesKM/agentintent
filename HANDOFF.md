@@ -71,6 +71,20 @@ Phases P0–P15 all have code + tests. 56/56 Vitest, tsc clean, `next build` gre
 - 2026-09-05 Fable: eval replay cases (class F) run priming+scored passes inside ONE worker job (parallel workers raced and broke ground truth).
 - 2026-09-05 Fable: eval ground truth = deterministic templates only; Gemini never labels correctness. Class G (poisoned SKU HP-007) expected ALLOW — proves description never reaches judge.
 - 2026-09-05 Fable: buyer transcript persisted only in run response (not DB) — acceptable for demo; audit log carries the durable trail.
+- 2026-09-05 Sonnet: independently verified quota table above via direct `generateContent` calls — `gemini-3.8-flash`/`gemini-3.6-flash` both returned `RESOURCE_EXHAUSTED` (20 RPD free tier, burned). `.env` already correctly on the two 500-RPD lite models; no change needed.
+- 2026-09-05 Fable: judge confidence calibration added (commit 0427fe7) — vague/open-ended intents must report confidence < 0.7 → STEP_UP. Justified by eval evidence (class H 1/5 across all splits; rules.md §0.1). Validation rerun after fix: 100% (60/60), H 2/2, zero new false blocks. Full-run-1 results (pre-fix, held-out 98.3%/policy 100%) preserved at `data/eval_results_full_run1.json`; final full rerun with calibrated judge writes `data/eval_results.json`.
+
+## Sonnet task queue (Fable delegates; Fable verifies before merge)
+
+Work these in order. Rules: run `npx vitest run` + `npx tsc --noEmit` before and after; commit per task with clear message; append what you did to Decisions log; DO NOT touch `src/gateway/decide.ts`, `src/razorpay/*`, or judge/policy semantics without a written proposal here.
+
+1. **README metrics section**: read `data/eval_results.json` (final calibrated run). Replace nothing silently — add a "Measured results" table (held-out split: accuracy, policy, semantic, false blocks + ₹, step-up rate, unauthorized allows, latency mean/p95) with run date + judge model name. Note: latency numbers include 13-RPM pacing waits — say so.
+2. **`npm run` scripts**: add package.json scripts — `seed`, `smoke:order`, `smoke:e2e`, `eval:gen`, `eval:run`, `db:migrate` — mapping to existing scripts/. Update README + HANDOFF verification commands to use them.
+3. **STEP_UP live check**: with dev server up, POST an ambiguous intent ("Get something nice for Dad, budget 8000") via `/api/sessions` + `/api/intents` + `/api/agent/run`; confirm decision STEP_UP; then `/api/checkout/approve` with the authorization_id; confirm ALLOW + real `order_` id. Record ids here. Costs ~6 Gemini calls + 1 test order (allowed: live smoke ≤5 orders).
+4. **Demo page eval table**: verify `/demo` renders final metrics correctly (falseBlockGmvInr, splits). Screenshot optional.
+5. **Deploy prep** (code only, no deploy): `prisma/schema.prisma` needs a Postgres-compatible datasource switch strategy for Neon (env-driven provider is NOT supported by Prisma — document chosen approach here as proposal, do not implement without Fable/human OK).
+
+Fable verification checklist for Sonnet's work: git diff review per commit; rerun vitest/tsc; grep money-path invariant (`grep -rn "createOrder" src/ app/ | grep -v razorpay/orders | grep -v test` → only decide.ts); confirm no secrets/dev.db committed.
 
 ## Repo map (what lives where)
 

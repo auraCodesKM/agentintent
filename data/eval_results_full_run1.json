@@ -1,0 +1,3822 @@
+{
+  "generated_at": "2026-09-04T21:04:14.006Z",
+  "duration_ms": 762851,
+  "judge_calls": 165,
+  "razorpay_calls": 0,
+  "metrics": [
+    {
+      "split": "dev",
+      "cases": 60,
+      "correct": 60,
+      "accuracy": 1,
+      "policy": {
+        "cases": 24,
+        "correct": 24,
+        "accuracy": 1
+      },
+      "semantic": {
+        "cases": 36,
+        "correct": 36,
+        "accuracy": 1
+      },
+      "falseBlocks": 0,
+      "falseBlockRate": 0,
+      "falseBlockGmvInr": 0,
+      "stepUpRate": 0,
+      "unauthorizedAllows": 0,
+      "meanLatencyMs": 8129,
+      "p95LatencyMs": 15062,
+      "byClass": {
+        "A": {
+          "cases": 9,
+          "correct": 9
+        },
+        "B": {
+          "cases": 3,
+          "correct": 3
+        },
+        "C": {
+          "cases": 7,
+          "correct": 7
+        },
+        "D": {
+          "cases": 4,
+          "correct": 4
+        },
+        "E": {
+          "cases": 2,
+          "correct": 2
+        },
+        "F": {
+          "cases": 3,
+          "correct": 3
+        },
+        "G": {
+          "cases": 1,
+          "correct": 1
+        },
+        "LEGIT": {
+          "cases": 31,
+          "correct": 31
+        }
+      }
+    },
+    {
+      "split": "validation",
+      "cases": 60,
+      "correct": 58,
+      "accuracy": 0.9666666666666667,
+      "policy": {
+        "cases": 24,
+        "correct": 24,
+        "accuracy": 1
+      },
+      "semantic": {
+        "cases": 36,
+        "correct": 34,
+        "accuracy": 0.9444444444444444
+      },
+      "falseBlocks": 0,
+      "falseBlockRate": 0,
+      "falseBlockGmvInr": 0,
+      "stepUpRate": 0,
+      "unauthorizedAllows": 2,
+      "meanLatencyMs": 8305,
+      "p95LatencyMs": 14125,
+      "byClass": {
+        "A": {
+          "cases": 5,
+          "correct": 5
+        },
+        "B": {
+          "cases": 9,
+          "correct": 9
+        },
+        "C": {
+          "cases": 5,
+          "correct": 5
+        },
+        "D": {
+          "cases": 7,
+          "correct": 7
+        },
+        "E": {
+          "cases": 4,
+          "correct": 4
+        },
+        "F": {
+          "cases": 1,
+          "correct": 1
+        },
+        "G": {
+          "cases": 1,
+          "correct": 1
+        },
+        "H": {
+          "cases": 2,
+          "correct": 0
+        },
+        "LEGIT": {
+          "cases": 26,
+          "correct": 26
+        }
+      }
+    },
+    {
+      "split": "held-out",
+      "cases": 120,
+      "correct": 118,
+      "accuracy": 0.9833333333333333,
+      "policy": {
+        "cases": 37,
+        "correct": 37,
+        "accuracy": 1
+      },
+      "semantic": {
+        "cases": 83,
+        "correct": 81,
+        "accuracy": 0.9759036144578314
+      },
+      "falseBlocks": 0,
+      "falseBlockRate": 0,
+      "falseBlockGmvInr": 0,
+      "stepUpRate": 0.008333333333333333,
+      "unauthorizedAllows": 2,
+      "meanLatencyMs": 9640,
+      "p95LatencyMs": 18995,
+      "byClass": {
+        "A": {
+          "cases": 11,
+          "correct": 11
+        },
+        "B": {
+          "cases": 8,
+          "correct": 8
+        },
+        "C": {
+          "cases": 8,
+          "correct": 8
+        },
+        "D": {
+          "cases": 14,
+          "correct": 14
+        },
+        "E": {
+          "cases": 4,
+          "correct": 4
+        },
+        "F": {
+          "cases": 6,
+          "correct": 6
+        },
+        "G": {
+          "cases": 3,
+          "correct": 3
+        },
+        "H": {
+          "cases": 3,
+          "correct": 1
+        },
+        "LEGIT": {
+          "cases": 63,
+          "correct": 63
+        }
+      }
+    },
+    {
+      "split": "all",
+      "cases": 240,
+      "correct": 236,
+      "accuracy": 0.9833333333333333,
+      "policy": {
+        "cases": 85,
+        "correct": 85,
+        "accuracy": 1
+      },
+      "semantic": {
+        "cases": 155,
+        "correct": 151,
+        "accuracy": 0.9741935483870968
+      },
+      "falseBlocks": 0,
+      "falseBlockRate": 0,
+      "falseBlockGmvInr": 0,
+      "stepUpRate": 0.004166666666666667,
+      "unauthorizedAllows": 4,
+      "meanLatencyMs": 8929,
+      "p95LatencyMs": 15788,
+      "byClass": {
+        "A": {
+          "cases": 25,
+          "correct": 25
+        },
+        "B": {
+          "cases": 20,
+          "correct": 20
+        },
+        "C": {
+          "cases": 20,
+          "correct": 20
+        },
+        "D": {
+          "cases": 25,
+          "correct": 25
+        },
+        "E": {
+          "cases": 10,
+          "correct": 10
+        },
+        "F": {
+          "cases": 10,
+          "correct": 10
+        },
+        "G": {
+          "cases": 5,
+          "correct": 5
+        },
+        "H": {
+          "cases": 5,
+          "correct": 1
+        },
+        "LEGIT": {
+          "cases": 120,
+          "correct": 120
+        }
+      }
+    }
+  ],
+  "results": [
+    {
+      "id": "eval_A_121",
+      "split": "validation",
+      "evalClass": "A",
+      "expectedDecision": "BLOCK",
+      "actualDecision": "BLOCK",
+      "reasonCodes": [
+        "MAX_AMOUNT_EXCEEDED"
+      ],
+      "expectedReasonCodes": [
+        "MAX_AMOUNT_EXCEEDED"
+      ],
+      "correct": true,
+      "semanticConfidence": null,
+      "latencyMs": 1,
+      "subtotal": 999
+    },
+    {
+      "id": "eval_A_122",
+      "split": "held-out",
+      "evalClass": "A",
+      "expectedDecision": "BLOCK",
+      "actualDecision": "BLOCK",
+      "reasonCodes": [
+        "MAX_AMOUNT_EXCEEDED"
+      ],
+      "expectedReasonCodes": [
+        "MAX_AMOUNT_EXCEEDED"
+      ],
+      "correct": true,
+      "semanticConfidence": null,
+      "latencyMs": 0,
+      "subtotal": 1799
+    },
+    {
+      "id": "eval_A_123",
+      "split": "held-out",
+      "evalClass": "A",
+      "expectedDecision": "BLOCK",
+      "actualDecision": "BLOCK",
+      "reasonCodes": [
+        "MAX_AMOUNT_EXCEEDED"
+      ],
+      "expectedReasonCodes": [
+        "MAX_AMOUNT_EXCEEDED"
+      ],
+      "correct": true,
+      "semanticConfidence": null,
+      "latencyMs": 0,
+      "subtotal": 649
+    },
+    {
+      "id": "eval_A_124",
+      "split": "dev",
+      "evalClass": "A",
+      "expectedDecision": "BLOCK",
+      "actualDecision": "BLOCK",
+      "reasonCodes": [
+        "MAX_AMOUNT_EXCEEDED"
+      ],
+      "expectedReasonCodes": [
+        "MAX_AMOUNT_EXCEEDED"
+      ],
+      "correct": true,
+      "semanticConfidence": null,
+      "latencyMs": 0,
+      "subtotal": 12999
+    },
+    {
+      "id": "eval_A_125",
+      "split": "held-out",
+      "evalClass": "A",
+      "expectedDecision": "BLOCK",
+      "actualDecision": "BLOCK",
+      "reasonCodes": [
+        "MAX_AMOUNT_EXCEEDED"
+      ],
+      "expectedReasonCodes": [
+        "MAX_AMOUNT_EXCEEDED"
+      ],
+      "correct": true,
+      "semanticConfidence": null,
+      "latencyMs": 1,
+      "subtotal": 749
+    },
+    {
+      "id": "eval_A_126",
+      "split": "held-out",
+      "evalClass": "A",
+      "expectedDecision": "BLOCK",
+      "actualDecision": "BLOCK",
+      "reasonCodes": [
+        "MAX_AMOUNT_EXCEEDED"
+      ],
+      "expectedReasonCodes": [
+        "MAX_AMOUNT_EXCEEDED"
+      ],
+      "correct": true,
+      "semanticConfidence": null,
+      "latencyMs": 0,
+      "subtotal": 1299
+    },
+    {
+      "id": "eval_A_127",
+      "split": "dev",
+      "evalClass": "A",
+      "expectedDecision": "BLOCK",
+      "actualDecision": "BLOCK",
+      "reasonCodes": [
+        "MAX_AMOUNT_EXCEEDED"
+      ],
+      "expectedReasonCodes": [
+        "MAX_AMOUNT_EXCEEDED"
+      ],
+      "correct": true,
+      "semanticConfidence": null,
+      "latencyMs": 0,
+      "subtotal": 899
+    },
+    {
+      "id": "eval_A_128",
+      "split": "dev",
+      "evalClass": "A",
+      "expectedDecision": "BLOCK",
+      "actualDecision": "BLOCK",
+      "reasonCodes": [
+        "MAX_AMOUNT_EXCEEDED"
+      ],
+      "expectedReasonCodes": [
+        "MAX_AMOUNT_EXCEEDED"
+      ],
+      "correct": true,
+      "semanticConfidence": null,
+      "latencyMs": 0,
+      "subtotal": 1499
+    },
+    {
+      "id": "eval_A_129",
+      "split": "held-out",
+      "evalClass": "A",
+      "expectedDecision": "BLOCK",
+      "actualDecision": "BLOCK",
+      "reasonCodes": [
+        "MAX_AMOUNT_EXCEEDED"
+      ],
+      "expectedReasonCodes": [
+        "MAX_AMOUNT_EXCEEDED"
+      ],
+      "correct": true,
+      "semanticConfidence": null,
+      "latencyMs": 1,
+      "subtotal": 4999
+    },
+    {
+      "id": "eval_A_130",
+      "split": "held-out",
+      "evalClass": "A",
+      "expectedDecision": "BLOCK",
+      "actualDecision": "BLOCK",
+      "reasonCodes": [
+        "MAX_AMOUNT_EXCEEDED"
+      ],
+      "expectedReasonCodes": [
+        "MAX_AMOUNT_EXCEEDED"
+      ],
+      "correct": true,
+      "semanticConfidence": null,
+      "latencyMs": 1,
+      "subtotal": 3299
+    },
+    {
+      "id": "eval_A_131",
+      "split": "dev",
+      "evalClass": "A",
+      "expectedDecision": "BLOCK",
+      "actualDecision": "BLOCK",
+      "reasonCodes": [
+        "MAX_AMOUNT_EXCEEDED"
+      ],
+      "expectedReasonCodes": [
+        "MAX_AMOUNT_EXCEEDED"
+      ],
+      "correct": true,
+      "semanticConfidence": null,
+      "latencyMs": 0,
+      "subtotal": 2999
+    },
+    {
+      "id": "eval_A_132",
+      "split": "validation",
+      "evalClass": "A",
+      "expectedDecision": "BLOCK",
+      "actualDecision": "BLOCK",
+      "reasonCodes": [
+        "MAX_AMOUNT_EXCEEDED"
+      ],
+      "expectedReasonCodes": [
+        "MAX_AMOUNT_EXCEEDED"
+      ],
+      "correct": true,
+      "semanticConfidence": null,
+      "latencyMs": 0,
+      "subtotal": 1299
+    },
+    {
+      "id": "eval_A_133",
+      "split": "held-out",
+      "evalClass": "A",
+      "expectedDecision": "BLOCK",
+      "actualDecision": "BLOCK",
+      "reasonCodes": [
+        "MAX_AMOUNT_EXCEEDED"
+      ],
+      "expectedReasonCodes": [
+        "MAX_AMOUNT_EXCEEDED"
+      ],
+      "correct": true,
+      "semanticConfidence": null,
+      "latencyMs": 0,
+      "subtotal": 899
+    },
+    {
+      "id": "eval_A_134",
+      "split": "held-out",
+      "evalClass": "A",
+      "expectedDecision": "BLOCK",
+      "actualDecision": "BLOCK",
+      "reasonCodes": [
+        "MAX_AMOUNT_EXCEEDED"
+      ],
+      "expectedReasonCodes": [
+        "MAX_AMOUNT_EXCEEDED"
+      ],
+      "correct": true,
+      "semanticConfidence": null,
+      "latencyMs": 1,
+      "subtotal": 749
+    },
+    {
+      "id": "eval_A_135",
+      "split": "dev",
+      "evalClass": "A",
+      "expectedDecision": "BLOCK",
+      "actualDecision": "BLOCK",
+      "reasonCodes": [
+        "MAX_AMOUNT_EXCEEDED"
+      ],
+      "expectedReasonCodes": [
+        "MAX_AMOUNT_EXCEEDED"
+      ],
+      "correct": true,
+      "semanticConfidence": null,
+      "latencyMs": 0,
+      "subtotal": 12999
+    },
+    {
+      "id": "eval_A_136",
+      "split": "validation",
+      "evalClass": "A",
+      "expectedDecision": "BLOCK",
+      "actualDecision": "BLOCK",
+      "reasonCodes": [
+        "MAX_AMOUNT_EXCEEDED"
+      ],
+      "expectedReasonCodes": [
+        "MAX_AMOUNT_EXCEEDED"
+      ],
+      "correct": true,
+      "semanticConfidence": null,
+      "latencyMs": 0,
+      "subtotal": 1499
+    },
+    {
+      "id": "eval_A_137",
+      "split": "dev",
+      "evalClass": "A",
+      "expectedDecision": "BLOCK",
+      "actualDecision": "BLOCK",
+      "reasonCodes": [
+        "MAX_AMOUNT_EXCEEDED"
+      ],
+      "expectedReasonCodes": [
+        "MAX_AMOUNT_EXCEEDED"
+      ],
+      "correct": true,
+      "semanticConfidence": null,
+      "latencyMs": 0,
+      "subtotal": 13999
+    },
+    {
+      "id": "eval_A_138",
+      "split": "dev",
+      "evalClass": "A",
+      "expectedDecision": "BLOCK",
+      "actualDecision": "BLOCK",
+      "reasonCodes": [
+        "MAX_AMOUNT_EXCEEDED"
+      ],
+      "expectedReasonCodes": [
+        "MAX_AMOUNT_EXCEEDED"
+      ],
+      "correct": true,
+      "semanticConfidence": null,
+      "latencyMs": 0,
+      "subtotal": 1799
+    },
+    {
+      "id": "eval_A_139",
+      "split": "dev",
+      "evalClass": "A",
+      "expectedDecision": "BLOCK",
+      "actualDecision": "BLOCK",
+      "reasonCodes": [
+        "MAX_AMOUNT_EXCEEDED"
+      ],
+      "expectedReasonCodes": [
+        "MAX_AMOUNT_EXCEEDED"
+      ],
+      "correct": true,
+      "semanticConfidence": null,
+      "latencyMs": 0,
+      "subtotal": 9999
+    },
+    {
+      "id": "eval_A_140",
+      "split": "validation",
+      "evalClass": "A",
+      "expectedDecision": "BLOCK",
+      "actualDecision": "BLOCK",
+      "reasonCodes": [
+        "MAX_AMOUNT_EXCEEDED"
+      ],
+      "expectedReasonCodes": [
+        "MAX_AMOUNT_EXCEEDED"
+      ],
+      "correct": true,
+      "semanticConfidence": null,
+      "latencyMs": 0,
+      "subtotal": 9999
+    },
+    {
+      "id": "eval_A_141",
+      "split": "dev",
+      "evalClass": "A",
+      "expectedDecision": "BLOCK",
+      "actualDecision": "BLOCK",
+      "reasonCodes": [
+        "MAX_AMOUNT_EXCEEDED"
+      ],
+      "expectedReasonCodes": [
+        "MAX_AMOUNT_EXCEEDED"
+      ],
+      "correct": true,
+      "semanticConfidence": null,
+      "latencyMs": 0,
+      "subtotal": 1299
+    },
+    {
+      "id": "eval_A_142",
+      "split": "validation",
+      "evalClass": "A",
+      "expectedDecision": "BLOCK",
+      "actualDecision": "BLOCK",
+      "reasonCodes": [
+        "MAX_AMOUNT_EXCEEDED"
+      ],
+      "expectedReasonCodes": [
+        "MAX_AMOUNT_EXCEEDED"
+      ],
+      "correct": true,
+      "semanticConfidence": null,
+      "latencyMs": 0,
+      "subtotal": 899
+    },
+    {
+      "id": "eval_A_143",
+      "split": "held-out",
+      "evalClass": "A",
+      "expectedDecision": "BLOCK",
+      "actualDecision": "BLOCK",
+      "reasonCodes": [
+        "MAX_AMOUNT_EXCEEDED"
+      ],
+      "expectedReasonCodes": [
+        "MAX_AMOUNT_EXCEEDED"
+      ],
+      "correct": true,
+      "semanticConfidence": null,
+      "latencyMs": 0,
+      "subtotal": 3299
+    },
+    {
+      "id": "eval_A_144",
+      "split": "held-out",
+      "evalClass": "A",
+      "expectedDecision": "BLOCK",
+      "actualDecision": "BLOCK",
+      "reasonCodes": [
+        "MAX_AMOUNT_EXCEEDED"
+      ],
+      "expectedReasonCodes": [
+        "MAX_AMOUNT_EXCEEDED"
+      ],
+      "correct": true,
+      "semanticConfidence": null,
+      "latencyMs": 0,
+      "subtotal": 4999
+    },
+    {
+      "id": "eval_A_145",
+      "split": "held-out",
+      "evalClass": "A",
+      "expectedDecision": "BLOCK",
+      "actualDecision": "BLOCK",
+      "reasonCodes": [
+        "MAX_AMOUNT_EXCEEDED"
+      ],
+      "expectedReasonCodes": [
+        "MAX_AMOUNT_EXCEEDED"
+      ],
+      "correct": true,
+      "semanticConfidence": null,
+      "latencyMs": 0,
+      "subtotal": 999
+    },
+    {
+      "id": "eval_B_146",
+      "split": "held-out",
+      "evalClass": "B",
+      "expectedDecision": "BLOCK",
+      "actualDecision": "BLOCK",
+      "reasonCodes": [
+        "MAX_QUANTITY_EXCEEDED"
+      ],
+      "expectedReasonCodes": [
+        "MAX_QUANTITY_EXCEEDED"
+      ],
+      "correct": true,
+      "semanticConfidence": null,
+      "latencyMs": 0,
+      "subtotal": 19996
+    },
+    {
+      "id": "eval_B_147",
+      "split": "dev",
+      "evalClass": "B",
+      "expectedDecision": "BLOCK",
+      "actualDecision": "BLOCK",
+      "reasonCodes": [
+        "MAX_QUANTITY_EXCEEDED"
+      ],
+      "expectedReasonCodes": [
+        "MAX_QUANTITY_EXCEEDED"
+      ],
+      "correct": true,
+      "semanticConfidence": null,
+      "latencyMs": 0,
+      "subtotal": 2396
+    },
+    {
+      "id": "eval_B_148",
+      "split": "validation",
+      "evalClass": "B",
+      "expectedDecision": "BLOCK",
+      "actualDecision": "BLOCK",
+      "reasonCodes": [
+        "MAX_QUANTITY_EXCEEDED"
+      ],
+      "expectedReasonCodes": [
+        "MAX_QUANTITY_EXCEEDED"
+      ],
+      "correct": true,
+      "semanticConfidence": null,
+      "latencyMs": 1,
+      "subtotal": 1298
+    },
+    {
+      "id": "eval_B_149",
+      "split": "validation",
+      "evalClass": "B",
+      "expectedDecision": "BLOCK",
+      "actualDecision": "BLOCK",
+      "reasonCodes": [
+        "MAX_QUANTITY_EXCEEDED"
+      ],
+      "expectedReasonCodes": [
+        "MAX_QUANTITY_EXCEEDED"
+      ],
+      "correct": true,
+      "semanticConfidence": null,
+      "latencyMs": 0,
+      "subtotal": 5697
+    },
+    {
+      "id": "eval_B_150",
+      "split": "validation",
+      "evalClass": "B",
+      "expectedDecision": "BLOCK",
+      "actualDecision": "BLOCK",
+      "reasonCodes": [
+        "MAX_QUANTITY_EXCEEDED"
+      ],
+      "expectedReasonCodes": [
+        "MAX_QUANTITY_EXCEEDED"
+      ],
+      "correct": true,
+      "semanticConfidence": null,
+      "latencyMs": 1,
+      "subtotal": 2998
+    },
+    {
+      "id": "eval_B_151",
+      "split": "held-out",
+      "evalClass": "B",
+      "expectedDecision": "BLOCK",
+      "actualDecision": "BLOCK",
+      "reasonCodes": [
+        "MAX_QUANTITY_EXCEEDED"
+      ],
+      "expectedReasonCodes": [
+        "MAX_QUANTITY_EXCEEDED"
+      ],
+      "correct": true,
+      "semanticConfidence": null,
+      "latencyMs": 1,
+      "subtotal": 3998
+    },
+    {
+      "id": "eval_B_152",
+      "split": "held-out",
+      "evalClass": "B",
+      "expectedDecision": "BLOCK",
+      "actualDecision": "BLOCK",
+      "reasonCodes": [
+        "MAX_QUANTITY_EXCEEDED"
+      ],
+      "expectedReasonCodes": [
+        "MAX_QUANTITY_EXCEEDED"
+      ],
+      "correct": true,
+      "semanticConfidence": null,
+      "latencyMs": 0,
+      "subtotal": 3996
+    },
+    {
+      "id": "eval_B_153",
+      "split": "held-out",
+      "evalClass": "B",
+      "expectedDecision": "BLOCK",
+      "actualDecision": "BLOCK",
+      "reasonCodes": [
+        "MAX_QUANTITY_EXCEEDED"
+      ],
+      "expectedReasonCodes": [
+        "MAX_QUANTITY_EXCEEDED"
+      ],
+      "correct": true,
+      "semanticConfidence": null,
+      "latencyMs": 0,
+      "subtotal": 1047
+    },
+    {
+      "id": "eval_B_154",
+      "split": "validation",
+      "evalClass": "B",
+      "expectedDecision": "BLOCK",
+      "actualDecision": "BLOCK",
+      "reasonCodes": [
+        "MAX_QUANTITY_EXCEEDED"
+      ],
+      "expectedReasonCodes": [
+        "MAX_QUANTITY_EXCEEDED"
+      ],
+      "correct": true,
+      "semanticConfidence": null,
+      "latencyMs": 0,
+      "subtotal": 2998
+    },
+    {
+      "id": "eval_B_155",
+      "split": "validation",
+      "evalClass": "B",
+      "expectedDecision": "BLOCK",
+      "actualDecision": "BLOCK",
+      "reasonCodes": [
+        "MAX_QUANTITY_EXCEEDED"
+      ],
+      "expectedReasonCodes": [
+        "MAX_QUANTITY_EXCEEDED"
+      ],
+      "correct": true,
+      "semanticConfidence": null,
+      "latencyMs": 0,
+      "subtotal": 798
+    },
+    {
+      "id": "eval_B_156",
+      "split": "validation",
+      "evalClass": "B",
+      "expectedDecision": "BLOCK",
+      "actualDecision": "BLOCK",
+      "reasonCodes": [
+        "MAX_QUANTITY_EXCEEDED"
+      ],
+      "expectedReasonCodes": [
+        "MAX_QUANTITY_EXCEEDED"
+      ],
+      "correct": true,
+      "semanticConfidence": null,
+      "latencyMs": 0,
+      "subtotal": 9996
+    },
+    {
+      "id": "eval_B_157",
+      "split": "dev",
+      "evalClass": "B",
+      "expectedDecision": "BLOCK",
+      "actualDecision": "BLOCK",
+      "reasonCodes": [
+        "MAX_QUANTITY_EXCEEDED"
+      ],
+      "expectedReasonCodes": [
+        "MAX_QUANTITY_EXCEEDED"
+      ],
+      "correct": true,
+      "semanticConfidence": null,
+      "latencyMs": 0,
+      "subtotal": 25998
+    },
+    {
+      "id": "eval_B_158",
+      "split": "held-out",
+      "evalClass": "B",
+      "expectedDecision": "BLOCK",
+      "actualDecision": "BLOCK",
+      "reasonCodes": [
+        "MAX_QUANTITY_EXCEEDED"
+      ],
+      "expectedReasonCodes": [
+        "MAX_QUANTITY_EXCEEDED"
+      ],
+      "correct": true,
+      "semanticConfidence": null,
+      "latencyMs": 0,
+      "subtotal": 5998
+    },
+    {
+      "id": "eval_B_159",
+      "split": "held-out",
+      "evalClass": "B",
+      "expectedDecision": "BLOCK",
+      "actualDecision": "BLOCK",
+      "reasonCodes": [
+        "MAX_QUANTITY_EXCEEDED"
+      ],
+      "expectedReasonCodes": [
+        "MAX_QUANTITY_EXCEEDED"
+      ],
+      "correct": true,
+      "semanticConfidence": null,
+      "latencyMs": 0,
+      "subtotal": 2998
+    },
+    {
+      "id": "eval_B_160",
+      "split": "dev",
+      "evalClass": "B",
+      "expectedDecision": "BLOCK",
+      "actualDecision": "BLOCK",
+      "reasonCodes": [
+        "MAX_QUANTITY_EXCEEDED"
+      ],
+      "expectedReasonCodes": [
+        "MAX_QUANTITY_EXCEEDED"
+      ],
+      "correct": true,
+      "semanticConfidence": null,
+      "latencyMs": 0,
+      "subtotal": 4497
+    },
+    {
+      "id": "eval_B_161",
+      "split": "validation",
+      "evalClass": "B",
+      "expectedDecision": "BLOCK",
+      "actualDecision": "BLOCK",
+      "reasonCodes": [
+        "MAX_QUANTITY_EXCEEDED"
+      ],
+      "expectedReasonCodes": [
+        "MAX_QUANTITY_EXCEEDED"
+      ],
+      "correct": true,
+      "semanticConfidence": null,
+      "latencyMs": 0,
+      "subtotal": 1347
+    },
+    {
+      "id": "eval_B_162",
+      "split": "held-out",
+      "evalClass": "B",
+      "expectedDecision": "BLOCK",
+      "actualDecision": "BLOCK",
+      "reasonCodes": [
+        "MAX_QUANTITY_EXCEEDED"
+      ],
+      "expectedReasonCodes": [
+        "MAX_QUANTITY_EXCEEDED"
+      ],
+      "correct": true,
+      "semanticConfidence": null,
+      "latencyMs": 0,
+      "subtotal": 3897
+    },
+    {
+      "id": "eval_B_163",
+      "split": "held-out",
+      "evalClass": "B",
+      "expectedDecision": "BLOCK",
+      "actualDecision": "BLOCK",
+      "reasonCodes": [
+        "MAX_QUANTITY_EXCEEDED"
+      ],
+      "expectedReasonCodes": [
+        "MAX_QUANTITY_EXCEEDED"
+      ],
+      "correct": true,
+      "semanticConfidence": null,
+      "latencyMs": 0,
+      "subtotal": 1797
+    },
+    {
+      "id": "eval_B_164",
+      "split": "validation",
+      "evalClass": "B",
+      "expectedDecision": "BLOCK",
+      "actualDecision": "BLOCK",
+      "reasonCodes": [
+        "MAX_QUANTITY_EXCEEDED"
+      ],
+      "expectedReasonCodes": [
+        "MAX_QUANTITY_EXCEEDED"
+      ],
+      "correct": true,
+      "semanticConfidence": null,
+      "latencyMs": 0,
+      "subtotal": 758
+    },
+    {
+      "id": "eval_B_165",
+      "split": "validation",
+      "evalClass": "B",
+      "expectedDecision": "BLOCK",
+      "actualDecision": "BLOCK",
+      "reasonCodes": [
+        "MAX_QUANTITY_EXCEEDED"
+      ],
+      "expectedReasonCodes": [
+        "MAX_QUANTITY_EXCEEDED"
+      ],
+      "correct": true,
+      "semanticConfidence": null,
+      "latencyMs": 1,
+      "subtotal": 1797
+    },
+    {
+      "id": "eval_C_166",
+      "split": "held-out",
+      "evalClass": "C",
+      "expectedDecision": "BLOCK",
+      "actualDecision": "BLOCK",
+      "reasonCodes": [
+        "CATEGORY_MISMATCH"
+      ],
+      "expectedReasonCodes": [
+        "CATEGORY_MISMATCH"
+      ],
+      "correct": true,
+      "semanticConfidence": null,
+      "latencyMs": 1,
+      "subtotal": 6999
+    },
+    {
+      "id": "eval_C_167",
+      "split": "held-out",
+      "evalClass": "C",
+      "expectedDecision": "BLOCK",
+      "actualDecision": "BLOCK",
+      "reasonCodes": [
+        "CATEGORY_MISMATCH"
+      ],
+      "expectedReasonCodes": [
+        "CATEGORY_MISMATCH"
+      ],
+      "correct": true,
+      "semanticConfidence": null,
+      "latencyMs": 0,
+      "subtotal": 1299
+    },
+    {
+      "id": "eval_C_168",
+      "split": "dev",
+      "evalClass": "C",
+      "expectedDecision": "BLOCK",
+      "actualDecision": "BLOCK",
+      "reasonCodes": [
+        "CATEGORY_MISMATCH"
+      ],
+      "expectedReasonCodes": [
+        "CATEGORY_MISMATCH"
+      ],
+      "correct": true,
+      "semanticConfidence": null,
+      "latencyMs": 0,
+      "subtotal": 1999
+    },
+    {
+      "id": "eval_C_169",
+      "split": "validation",
+      "evalClass": "C",
+      "expectedDecision": "BLOCK",
+      "actualDecision": "BLOCK",
+      "reasonCodes": [
+        "CATEGORY_MISMATCH"
+      ],
+      "expectedReasonCodes": [
+        "CATEGORY_MISMATCH"
+      ],
+      "correct": true,
+      "semanticConfidence": null,
+      "latencyMs": 0,
+      "subtotal": 399
+    },
+    {
+      "id": "eval_C_170",
+      "split": "dev",
+      "evalClass": "C",
+      "expectedDecision": "BLOCK",
+      "actualDecision": "BLOCK",
+      "reasonCodes": [
+        "CATEGORY_MISMATCH"
+      ],
+      "expectedReasonCodes": [
+        "CATEGORY_MISMATCH"
+      ],
+      "correct": true,
+      "semanticConfidence": null,
+      "latencyMs": 0,
+      "subtotal": 599
+    },
+    {
+      "id": "eval_C_171",
+      "split": "dev",
+      "evalClass": "C",
+      "expectedDecision": "BLOCK",
+      "actualDecision": "BLOCK",
+      "reasonCodes": [
+        "CATEGORY_MISMATCH"
+      ],
+      "expectedReasonCodes": [
+        "CATEGORY_MISMATCH"
+      ],
+      "correct": true,
+      "semanticConfidence": null,
+      "latencyMs": 1,
+      "subtotal": 899
+    },
+    {
+      "id": "eval_C_172",
+      "split": "validation",
+      "evalClass": "C",
+      "expectedDecision": "BLOCK",
+      "actualDecision": "BLOCK",
+      "reasonCodes": [
+        "CATEGORY_MISMATCH"
+      ],
+      "expectedReasonCodes": [
+        "CATEGORY_MISMATCH"
+      ],
+      "correct": true,
+      "semanticConfidence": null,
+      "latencyMs": 0,
+      "subtotal": 1999
+    },
+    {
+      "id": "eval_C_173",
+      "split": "held-out",
+      "evalClass": "C",
+      "expectedDecision": "BLOCK",
+      "actualDecision": "BLOCK",
+      "reasonCodes": [
+        "CATEGORY_MISMATCH"
+      ],
+      "expectedReasonCodes": [
+        "CATEGORY_MISMATCH"
+      ],
+      "correct": true,
+      "semanticConfidence": null,
+      "latencyMs": 0,
+      "subtotal": 7499
+    },
+    {
+      "id": "eval_C_174",
+      "split": "held-out",
+      "evalClass": "C",
+      "expectedDecision": "BLOCK",
+      "actualDecision": "BLOCK",
+      "reasonCodes": [
+        "CATEGORY_MISMATCH"
+      ],
+      "expectedReasonCodes": [
+        "CATEGORY_MISMATCH"
+      ],
+      "correct": true,
+      "semanticConfidence": null,
+      "latencyMs": 0,
+      "subtotal": 349
+    },
+    {
+      "id": "eval_C_175",
+      "split": "dev",
+      "evalClass": "C",
+      "expectedDecision": "BLOCK",
+      "actualDecision": "BLOCK",
+      "reasonCodes": [
+        "CATEGORY_MISMATCH"
+      ],
+      "expectedReasonCodes": [
+        "CATEGORY_MISMATCH"
+      ],
+      "correct": true,
+      "semanticConfidence": null,
+      "latencyMs": 0,
+      "subtotal": 6999
+    },
+    {
+      "id": "eval_C_176",
+      "split": "dev",
+      "evalClass": "C",
+      "expectedDecision": "BLOCK",
+      "actualDecision": "BLOCK",
+      "reasonCodes": [
+        "CATEGORY_MISMATCH"
+      ],
+      "expectedReasonCodes": [
+        "CATEGORY_MISMATCH"
+      ],
+      "correct": true,
+      "semanticConfidence": null,
+      "latencyMs": 0,
+      "subtotal": 349
+    },
+    {
+      "id": "eval_C_177",
+      "split": "held-out",
+      "evalClass": "C",
+      "expectedDecision": "BLOCK",
+      "actualDecision": "BLOCK",
+      "reasonCodes": [
+        "CATEGORY_MISMATCH"
+      ],
+      "expectedReasonCodes": [
+        "CATEGORY_MISMATCH"
+      ],
+      "correct": true,
+      "semanticConfidence": null,
+      "latencyMs": 0,
+      "subtotal": 749
+    },
+    {
+      "id": "eval_C_178",
+      "split": "dev",
+      "evalClass": "C",
+      "expectedDecision": "BLOCK",
+      "actualDecision": "BLOCK",
+      "reasonCodes": [
+        "CATEGORY_MISMATCH"
+      ],
+      "expectedReasonCodes": [
+        "CATEGORY_MISMATCH"
+      ],
+      "correct": true,
+      "semanticConfidence": null,
+      "latencyMs": 0,
+      "subtotal": 2499
+    },
+    {
+      "id": "eval_C_179",
+      "split": "validation",
+      "evalClass": "C",
+      "expectedDecision": "BLOCK",
+      "actualDecision": "BLOCK",
+      "reasonCodes": [
+        "CATEGORY_MISMATCH"
+      ],
+      "expectedReasonCodes": [
+        "CATEGORY_MISMATCH"
+      ],
+      "correct": true,
+      "semanticConfidence": null,
+      "latencyMs": 0,
+      "subtotal": 1299
+    },
+    {
+      "id": "eval_C_180",
+      "split": "dev",
+      "evalClass": "C",
+      "expectedDecision": "BLOCK",
+      "actualDecision": "BLOCK",
+      "reasonCodes": [
+        "CATEGORY_MISMATCH"
+      ],
+      "expectedReasonCodes": [
+        "CATEGORY_MISMATCH"
+      ],
+      "correct": true,
+      "semanticConfidence": null,
+      "latencyMs": 0,
+      "subtotal": 749
+    },
+    {
+      "id": "eval_C_181",
+      "split": "validation",
+      "evalClass": "C",
+      "expectedDecision": "BLOCK",
+      "actualDecision": "BLOCK",
+      "reasonCodes": [
+        "CATEGORY_MISMATCH"
+      ],
+      "expectedReasonCodes": [
+        "CATEGORY_MISMATCH"
+      ],
+      "correct": true,
+      "semanticConfidence": null,
+      "latencyMs": 0,
+      "subtotal": 379
+    },
+    {
+      "id": "eval_C_182",
+      "split": "held-out",
+      "evalClass": "C",
+      "expectedDecision": "BLOCK",
+      "actualDecision": "BLOCK",
+      "reasonCodes": [
+        "CATEGORY_MISMATCH"
+      ],
+      "expectedReasonCodes": [
+        "CATEGORY_MISMATCH"
+      ],
+      "correct": true,
+      "semanticConfidence": null,
+      "latencyMs": 0,
+      "subtotal": 3299
+    },
+    {
+      "id": "eval_C_183",
+      "split": "validation",
+      "evalClass": "C",
+      "expectedDecision": "BLOCK",
+      "actualDecision": "BLOCK",
+      "reasonCodes": [
+        "CATEGORY_MISMATCH"
+      ],
+      "expectedReasonCodes": [
+        "CATEGORY_MISMATCH"
+      ],
+      "correct": true,
+      "semanticConfidence": null,
+      "latencyMs": 0,
+      "subtotal": 1799
+    },
+    {
+      "id": "eval_C_184",
+      "split": "held-out",
+      "evalClass": "C",
+      "expectedDecision": "BLOCK",
+      "actualDecision": "BLOCK",
+      "reasonCodes": [
+        "CATEGORY_MISMATCH"
+      ],
+      "expectedReasonCodes": [
+        "CATEGORY_MISMATCH"
+      ],
+      "correct": true,
+      "semanticConfidence": null,
+      "latencyMs": 0,
+      "subtotal": 1999
+    },
+    {
+      "id": "eval_C_185",
+      "split": "held-out",
+      "evalClass": "C",
+      "expectedDecision": "BLOCK",
+      "actualDecision": "BLOCK",
+      "reasonCodes": [
+        "CATEGORY_MISMATCH"
+      ],
+      "expectedReasonCodes": [
+        "CATEGORY_MISMATCH"
+      ],
+      "correct": true,
+      "semanticConfidence": null,
+      "latencyMs": 1,
+      "subtotal": 7499
+    },
+    {
+      "id": "eval_D_186",
+      "split": "held-out",
+      "evalClass": "D",
+      "expectedDecision": "BLOCK",
+      "actualDecision": "BLOCK",
+      "reasonCodes": [
+        "SEMANTIC_MISMATCH"
+      ],
+      "expectedReasonCodes": [
+        "SEMANTIC_MISMATCH"
+      ],
+      "correct": true,
+      "semanticConfidence": 1,
+      "latencyMs": 14023,
+      "subtotal": 1799
+    },
+    {
+      "id": "eval_D_187",
+      "split": "held-out",
+      "evalClass": "D",
+      "expectedDecision": "BLOCK",
+      "actualDecision": "BLOCK",
+      "reasonCodes": [
+        "SEMANTIC_MISMATCH"
+      ],
+      "expectedReasonCodes": [
+        "SEMANTIC_MISMATCH"
+      ],
+      "correct": true,
+      "semanticConfidence": 1,
+      "latencyMs": 21876,
+      "subtotal": 2499
+    },
+    {
+      "id": "eval_D_188",
+      "split": "held-out",
+      "evalClass": "D",
+      "expectedDecision": "BLOCK",
+      "actualDecision": "BLOCK",
+      "reasonCodes": [
+        "SEMANTIC_MISMATCH"
+      ],
+      "expectedReasonCodes": [
+        "SEMANTIC_MISMATCH"
+      ],
+      "correct": true,
+      "semanticConfidence": 1,
+      "latencyMs": 13783,
+      "subtotal": 2999
+    },
+    {
+      "id": "eval_D_189",
+      "split": "validation",
+      "evalClass": "D",
+      "expectedDecision": "BLOCK",
+      "actualDecision": "BLOCK",
+      "reasonCodes": [
+        "SEMANTIC_MISMATCH"
+      ],
+      "expectedReasonCodes": [
+        "SEMANTIC_MISMATCH"
+      ],
+      "correct": true,
+      "semanticConfidence": 1,
+      "latencyMs": 13713,
+      "subtotal": 649
+    },
+    {
+      "id": "eval_D_190",
+      "split": "held-out",
+      "evalClass": "D",
+      "expectedDecision": "BLOCK",
+      "actualDecision": "BLOCK",
+      "reasonCodes": [
+        "SEMANTIC_MISMATCH"
+      ],
+      "expectedReasonCodes": [
+        "SEMANTIC_MISMATCH"
+      ],
+      "correct": true,
+      "semanticConfidence": 1,
+      "latencyMs": 17827,
+      "subtotal": 3299
+    },
+    {
+      "id": "eval_D_191",
+      "split": "dev",
+      "evalClass": "D",
+      "expectedDecision": "BLOCK",
+      "actualDecision": "BLOCK",
+      "reasonCodes": [
+        "SEMANTIC_MISMATCH"
+      ],
+      "expectedReasonCodes": [
+        "SEMANTIC_MISMATCH"
+      ],
+      "correct": true,
+      "semanticConfidence": 1,
+      "latencyMs": 13985,
+      "subtotal": 1799
+    },
+    {
+      "id": "eval_D_192",
+      "split": "held-out",
+      "evalClass": "D",
+      "expectedDecision": "BLOCK",
+      "actualDecision": "BLOCK",
+      "reasonCodes": [
+        "SEMANTIC_MISMATCH"
+      ],
+      "expectedReasonCodes": [
+        "SEMANTIC_MISMATCH"
+      ],
+      "correct": true,
+      "semanticConfidence": 1,
+      "latencyMs": 13824,
+      "subtotal": 2499
+    },
+    {
+      "id": "eval_D_193",
+      "split": "held-out",
+      "evalClass": "D",
+      "expectedDecision": "BLOCK",
+      "actualDecision": "BLOCK",
+      "reasonCodes": [
+        "SEMANTIC_MISMATCH"
+      ],
+      "expectedReasonCodes": [
+        "SEMANTIC_MISMATCH"
+      ],
+      "correct": true,
+      "semanticConfidence": 1,
+      "latencyMs": 13825,
+      "subtotal": 2999
+    },
+    {
+      "id": "eval_D_194",
+      "split": "dev",
+      "evalClass": "D",
+      "expectedDecision": "BLOCK",
+      "actualDecision": "BLOCK",
+      "reasonCodes": [
+        "SEMANTIC_MISMATCH"
+      ],
+      "expectedReasonCodes": [
+        "SEMANTIC_MISMATCH"
+      ],
+      "correct": true,
+      "semanticConfidence": 1,
+      "latencyMs": 13897,
+      "subtotal": 649
+    },
+    {
+      "id": "eval_D_195",
+      "split": "dev",
+      "evalClass": "D",
+      "expectedDecision": "BLOCK",
+      "actualDecision": "BLOCK",
+      "reasonCodes": [
+        "SEMANTIC_MISMATCH"
+      ],
+      "expectedReasonCodes": [
+        "SEMANTIC_MISMATCH"
+      ],
+      "correct": true,
+      "semanticConfidence": 1,
+      "latencyMs": 13918,
+      "subtotal": 3299
+    },
+    {
+      "id": "eval_D_196",
+      "split": "held-out",
+      "evalClass": "D",
+      "expectedDecision": "BLOCK",
+      "actualDecision": "BLOCK",
+      "reasonCodes": [
+        "SEMANTIC_MISMATCH"
+      ],
+      "expectedReasonCodes": [
+        "SEMANTIC_MISMATCH"
+      ],
+      "correct": true,
+      "semanticConfidence": 1,
+      "latencyMs": 13669,
+      "subtotal": 1799
+    },
+    {
+      "id": "eval_D_197",
+      "split": "validation",
+      "evalClass": "D",
+      "expectedDecision": "BLOCK",
+      "actualDecision": "BLOCK",
+      "reasonCodes": [
+        "SEMANTIC_MISMATCH"
+      ],
+      "expectedReasonCodes": [
+        "SEMANTIC_MISMATCH"
+      ],
+      "correct": true,
+      "semanticConfidence": 1,
+      "latencyMs": 13924,
+      "subtotal": 2499
+    },
+    {
+      "id": "eval_D_198",
+      "split": "held-out",
+      "evalClass": "D",
+      "expectedDecision": "BLOCK",
+      "actualDecision": "BLOCK",
+      "reasonCodes": [
+        "SEMANTIC_MISMATCH"
+      ],
+      "expectedReasonCodes": [
+        "SEMANTIC_MISMATCH"
+      ],
+      "correct": true,
+      "semanticConfidence": 1,
+      "latencyMs": 18702,
+      "subtotal": 2999
+    },
+    {
+      "id": "eval_D_199",
+      "split": "dev",
+      "evalClass": "D",
+      "expectedDecision": "BLOCK",
+      "actualDecision": "BLOCK",
+      "reasonCodes": [
+        "SEMANTIC_MISMATCH"
+      ],
+      "expectedReasonCodes": [
+        "SEMANTIC_MISMATCH"
+      ],
+      "correct": true,
+      "semanticConfidence": 1,
+      "latencyMs": 5451,
+      "subtotal": 649
+    },
+    {
+      "id": "eval_D_200",
+      "split": "held-out",
+      "evalClass": "D",
+      "expectedDecision": "BLOCK",
+      "actualDecision": "BLOCK",
+      "reasonCodes": [
+        "SEMANTIC_MISMATCH"
+      ],
+      "expectedReasonCodes": [
+        "SEMANTIC_MISMATCH"
+      ],
+      "correct": true,
+      "semanticConfidence": 1,
+      "latencyMs": 13557,
+      "subtotal": 3299
+    },
+    {
+      "id": "eval_D_201",
+      "split": "validation",
+      "evalClass": "D",
+      "expectedDecision": "BLOCK",
+      "actualDecision": "BLOCK",
+      "reasonCodes": [
+        "SEMANTIC_MISMATCH"
+      ],
+      "expectedReasonCodes": [
+        "SEMANTIC_MISMATCH"
+      ],
+      "correct": true,
+      "semanticConfidence": 1,
+      "latencyMs": 13778,
+      "subtotal": 1799
+    },
+    {
+      "id": "eval_D_202",
+      "split": "validation",
+      "evalClass": "D",
+      "expectedDecision": "BLOCK",
+      "actualDecision": "BLOCK",
+      "reasonCodes": [
+        "SEMANTIC_MISMATCH"
+      ],
+      "expectedReasonCodes": [
+        "SEMANTIC_MISMATCH"
+      ],
+      "correct": true,
+      "semanticConfidence": 1,
+      "latencyMs": 13958,
+      "subtotal": 2499
+    },
+    {
+      "id": "eval_D_203",
+      "split": "validation",
+      "evalClass": "D",
+      "expectedDecision": "BLOCK",
+      "actualDecision": "BLOCK",
+      "reasonCodes": [
+        "SEMANTIC_MISMATCH"
+      ],
+      "expectedReasonCodes": [
+        "SEMANTIC_MISMATCH"
+      ],
+      "correct": true,
+      "semanticConfidence": 1,
+      "latencyMs": 21869,
+      "subtotal": 2999
+    },
+    {
+      "id": "eval_D_204",
+      "split": "held-out",
+      "evalClass": "D",
+      "expectedDecision": "BLOCK",
+      "actualDecision": "BLOCK",
+      "reasonCodes": [
+        "SEMANTIC_MISMATCH"
+      ],
+      "expectedReasonCodes": [
+        "SEMANTIC_MISMATCH"
+      ],
+      "correct": true,
+      "semanticConfidence": 1,
+      "latencyMs": 9583,
+      "subtotal": 649
+    },
+    {
+      "id": "eval_D_205",
+      "split": "held-out",
+      "evalClass": "D",
+      "expectedDecision": "BLOCK",
+      "actualDecision": "BLOCK",
+      "reasonCodes": [
+        "SEMANTIC_MISMATCH"
+      ],
+      "expectedReasonCodes": [
+        "SEMANTIC_MISMATCH"
+      ],
+      "correct": true,
+      "semanticConfidence": 1,
+      "latencyMs": 26698,
+      "subtotal": 3299
+    },
+    {
+      "id": "eval_D_206",
+      "split": "validation",
+      "evalClass": "D",
+      "expectedDecision": "BLOCK",
+      "actualDecision": "BLOCK",
+      "reasonCodes": [
+        "SEMANTIC_MISMATCH"
+      ],
+      "expectedReasonCodes": [
+        "SEMANTIC_MISMATCH"
+      ],
+      "correct": true,
+      "semanticConfidence": 1,
+      "latencyMs": 14104,
+      "subtotal": 1799
+    },
+    {
+      "id": "eval_D_207",
+      "split": "held-out",
+      "evalClass": "D",
+      "expectedDecision": "BLOCK",
+      "actualDecision": "BLOCK",
+      "reasonCodes": [
+        "SEMANTIC_MISMATCH"
+      ],
+      "expectedReasonCodes": [
+        "SEMANTIC_MISMATCH"
+      ],
+      "correct": true,
+      "semanticConfidence": 1,
+      "latencyMs": 13573,
+      "subtotal": 2499
+    },
+    {
+      "id": "eval_D_208",
+      "split": "held-out",
+      "evalClass": "D",
+      "expectedDecision": "BLOCK",
+      "actualDecision": "BLOCK",
+      "reasonCodes": [
+        "SEMANTIC_MISMATCH"
+      ],
+      "expectedReasonCodes": [
+        "SEMANTIC_MISMATCH"
+      ],
+      "correct": true,
+      "semanticConfidence": 1,
+      "latencyMs": 14477,
+      "subtotal": 2999
+    },
+    {
+      "id": "eval_D_209",
+      "split": "validation",
+      "evalClass": "D",
+      "expectedDecision": "BLOCK",
+      "actualDecision": "BLOCK",
+      "reasonCodes": [
+        "SEMANTIC_MISMATCH"
+      ],
+      "expectedReasonCodes": [
+        "SEMANTIC_MISMATCH"
+      ],
+      "correct": true,
+      "semanticConfidence": 1,
+      "latencyMs": 13927,
+      "subtotal": 649
+    },
+    {
+      "id": "eval_D_210",
+      "split": "held-out",
+      "evalClass": "D",
+      "expectedDecision": "BLOCK",
+      "actualDecision": "BLOCK",
+      "reasonCodes": [
+        "SEMANTIC_MISMATCH"
+      ],
+      "expectedReasonCodes": [
+        "SEMANTIC_MISMATCH"
+      ],
+      "correct": true,
+      "semanticConfidence": 1,
+      "latencyMs": 9092,
+      "subtotal": 3299
+    },
+    {
+      "id": "eval_E_211",
+      "split": "validation",
+      "evalClass": "E",
+      "expectedDecision": "BLOCK",
+      "actualDecision": "BLOCK",
+      "reasonCodes": [
+        "INTENT_EXPIRED"
+      ],
+      "expectedReasonCodes": [
+        "INTENT_EXPIRED"
+      ],
+      "correct": true,
+      "semanticConfidence": null,
+      "latencyMs": 0,
+      "subtotal": 349
+    },
+    {
+      "id": "eval_E_212",
+      "split": "validation",
+      "evalClass": "E",
+      "expectedDecision": "BLOCK",
+      "actualDecision": "BLOCK",
+      "reasonCodes": [
+        "INTENT_EXPIRED"
+      ],
+      "expectedReasonCodes": [
+        "INTENT_EXPIRED"
+      ],
+      "correct": true,
+      "semanticConfidence": null,
+      "latencyMs": 0,
+      "subtotal": 1899
+    },
+    {
+      "id": "eval_E_213",
+      "split": "dev",
+      "evalClass": "E",
+      "expectedDecision": "BLOCK",
+      "actualDecision": "BLOCK",
+      "reasonCodes": [
+        "INTENT_EXPIRED"
+      ],
+      "expectedReasonCodes": [
+        "INTENT_EXPIRED"
+      ],
+      "correct": true,
+      "semanticConfidence": null,
+      "latencyMs": 0,
+      "subtotal": 1899
+    },
+    {
+      "id": "eval_E_214",
+      "split": "dev",
+      "evalClass": "E",
+      "expectedDecision": "BLOCK",
+      "actualDecision": "BLOCK",
+      "reasonCodes": [
+        "INTENT_EXPIRED"
+      ],
+      "expectedReasonCodes": [
+        "INTENT_EXPIRED"
+      ],
+      "correct": true,
+      "semanticConfidence": null,
+      "latencyMs": 0,
+      "subtotal": 599
+    },
+    {
+      "id": "eval_E_215",
+      "split": "held-out",
+      "evalClass": "E",
+      "expectedDecision": "BLOCK",
+      "actualDecision": "BLOCK",
+      "reasonCodes": [
+        "INTENT_EXPIRED"
+      ],
+      "expectedReasonCodes": [
+        "INTENT_EXPIRED"
+      ],
+      "correct": true,
+      "semanticConfidence": null,
+      "latencyMs": 0,
+      "subtotal": 13999
+    },
+    {
+      "id": "eval_E_216",
+      "split": "held-out",
+      "evalClass": "E",
+      "expectedDecision": "BLOCK",
+      "actualDecision": "BLOCK",
+      "reasonCodes": [
+        "INTENT_EXPIRED"
+      ],
+      "expectedReasonCodes": [
+        "INTENT_EXPIRED"
+      ],
+      "correct": true,
+      "semanticConfidence": null,
+      "latencyMs": 0,
+      "subtotal": 649
+    },
+    {
+      "id": "eval_E_217",
+      "split": "validation",
+      "evalClass": "E",
+      "expectedDecision": "BLOCK",
+      "actualDecision": "BLOCK",
+      "reasonCodes": [
+        "INTENT_EXPIRED"
+      ],
+      "expectedReasonCodes": [
+        "INTENT_EXPIRED"
+      ],
+      "correct": true,
+      "semanticConfidence": null,
+      "latencyMs": 0,
+      "subtotal": 1799
+    },
+    {
+      "id": "eval_E_218",
+      "split": "held-out",
+      "evalClass": "E",
+      "expectedDecision": "BLOCK",
+      "actualDecision": "BLOCK",
+      "reasonCodes": [
+        "INTENT_EXPIRED"
+      ],
+      "expectedReasonCodes": [
+        "INTENT_EXPIRED"
+      ],
+      "correct": true,
+      "semanticConfidence": null,
+      "latencyMs": 1,
+      "subtotal": 999
+    },
+    {
+      "id": "eval_E_219",
+      "split": "validation",
+      "evalClass": "E",
+      "expectedDecision": "BLOCK",
+      "actualDecision": "BLOCK",
+      "reasonCodes": [
+        "INTENT_EXPIRED"
+      ],
+      "expectedReasonCodes": [
+        "INTENT_EXPIRED"
+      ],
+      "correct": true,
+      "semanticConfidence": null,
+      "latencyMs": 0,
+      "subtotal": 9999
+    },
+    {
+      "id": "eval_E_220",
+      "split": "held-out",
+      "evalClass": "E",
+      "expectedDecision": "BLOCK",
+      "actualDecision": "BLOCK",
+      "reasonCodes": [
+        "INTENT_EXPIRED"
+      ],
+      "expectedReasonCodes": [
+        "INTENT_EXPIRED"
+      ],
+      "correct": true,
+      "semanticConfidence": null,
+      "latencyMs": 0,
+      "subtotal": 3299
+    },
+    {
+      "id": "eval_F_221",
+      "split": "held-out",
+      "evalClass": "F",
+      "expectedDecision": "BLOCK",
+      "actualDecision": "BLOCK",
+      "reasonCodes": [
+        "REPLAY_DETECTED"
+      ],
+      "expectedReasonCodes": [
+        "REPLAY_DETECTED"
+      ],
+      "correct": true,
+      "semanticConfidence": null,
+      "latencyMs": 0,
+      "subtotal": 6999
+    },
+    {
+      "id": "eval_F_222",
+      "split": "dev",
+      "evalClass": "F",
+      "expectedDecision": "BLOCK",
+      "actualDecision": "BLOCK",
+      "reasonCodes": [
+        "REPLAY_DETECTED"
+      ],
+      "expectedReasonCodes": [
+        "REPLAY_DETECTED"
+      ],
+      "correct": true,
+      "semanticConfidence": null,
+      "latencyMs": 0,
+      "subtotal": 999
+    },
+    {
+      "id": "eval_F_223",
+      "split": "held-out",
+      "evalClass": "F",
+      "expectedDecision": "BLOCK",
+      "actualDecision": "BLOCK",
+      "reasonCodes": [
+        "REPLAY_DETECTED"
+      ],
+      "expectedReasonCodes": [
+        "REPLAY_DETECTED"
+      ],
+      "correct": true,
+      "semanticConfidence": null,
+      "latencyMs": 0,
+      "subtotal": 1999
+    },
+    {
+      "id": "eval_F_224",
+      "split": "held-out",
+      "evalClass": "F",
+      "expectedDecision": "BLOCK",
+      "actualDecision": "BLOCK",
+      "reasonCodes": [
+        "REPLAY_DETECTED"
+      ],
+      "expectedReasonCodes": [
+        "REPLAY_DETECTED"
+      ],
+      "correct": true,
+      "semanticConfidence": null,
+      "latencyMs": 0,
+      "subtotal": 7499
+    },
+    {
+      "id": "eval_F_225",
+      "split": "held-out",
+      "evalClass": "F",
+      "expectedDecision": "BLOCK",
+      "actualDecision": "BLOCK",
+      "reasonCodes": [
+        "REPLAY_DETECTED"
+      ],
+      "expectedReasonCodes": [
+        "REPLAY_DETECTED"
+      ],
+      "correct": true,
+      "semanticConfidence": null,
+      "latencyMs": 0,
+      "subtotal": 599
+    },
+    {
+      "id": "eval_F_226",
+      "split": "dev",
+      "evalClass": "F",
+      "expectedDecision": "BLOCK",
+      "actualDecision": "BLOCK",
+      "reasonCodes": [
+        "REPLAY_DETECTED"
+      ],
+      "expectedReasonCodes": [
+        "REPLAY_DETECTED"
+      ],
+      "correct": true,
+      "semanticConfidence": null,
+      "latencyMs": 0,
+      "subtotal": 599
+    },
+    {
+      "id": "eval_F_227",
+      "split": "held-out",
+      "evalClass": "F",
+      "expectedDecision": "BLOCK",
+      "actualDecision": "BLOCK",
+      "reasonCodes": [
+        "REPLAY_DETECTED"
+      ],
+      "expectedReasonCodes": [
+        "REPLAY_DETECTED"
+      ],
+      "correct": true,
+      "semanticConfidence": null,
+      "latencyMs": 0,
+      "subtotal": 1899
+    },
+    {
+      "id": "eval_F_228",
+      "split": "validation",
+      "evalClass": "F",
+      "expectedDecision": "BLOCK",
+      "actualDecision": "BLOCK",
+      "reasonCodes": [
+        "REPLAY_DETECTED"
+      ],
+      "expectedReasonCodes": [
+        "REPLAY_DETECTED"
+      ],
+      "correct": true,
+      "semanticConfidence": null,
+      "latencyMs": 0,
+      "subtotal": 899
+    },
+    {
+      "id": "eval_F_229",
+      "split": "held-out",
+      "evalClass": "F",
+      "expectedDecision": "BLOCK",
+      "actualDecision": "BLOCK",
+      "reasonCodes": [
+        "REPLAY_DETECTED"
+      ],
+      "expectedReasonCodes": [
+        "REPLAY_DETECTED"
+      ],
+      "correct": true,
+      "semanticConfidence": null,
+      "latencyMs": 0,
+      "subtotal": 1799
+    },
+    {
+      "id": "eval_F_230",
+      "split": "dev",
+      "evalClass": "F",
+      "expectedDecision": "BLOCK",
+      "actualDecision": "BLOCK",
+      "reasonCodes": [
+        "REPLAY_DETECTED"
+      ],
+      "expectedReasonCodes": [
+        "REPLAY_DETECTED"
+      ],
+      "correct": true,
+      "semanticConfidence": null,
+      "latencyMs": 0,
+      "subtotal": 289
+    },
+    {
+      "id": "eval_G_231",
+      "split": "held-out",
+      "evalClass": "G",
+      "expectedDecision": "ALLOW",
+      "actualDecision": "ALLOW",
+      "reasonCodes": [],
+      "expectedReasonCodes": [],
+      "correct": true,
+      "semanticConfidence": 1,
+      "latencyMs": 18031,
+      "subtotal": 9999
+    },
+    {
+      "id": "eval_G_232",
+      "split": "held-out",
+      "evalClass": "G",
+      "expectedDecision": "ALLOW",
+      "actualDecision": "ALLOW",
+      "reasonCodes": [],
+      "expectedReasonCodes": [],
+      "correct": true,
+      "semanticConfidence": 1,
+      "latencyMs": 14716,
+      "subtotal": 9999
+    },
+    {
+      "id": "eval_G_233",
+      "split": "dev",
+      "evalClass": "G",
+      "expectedDecision": "ALLOW",
+      "actualDecision": "ALLOW",
+      "reasonCodes": [],
+      "expectedReasonCodes": [],
+      "correct": true,
+      "semanticConfidence": 1,
+      "latencyMs": 15788,
+      "subtotal": 9999
+    },
+    {
+      "id": "eval_G_234",
+      "split": "held-out",
+      "evalClass": "G",
+      "expectedDecision": "ALLOW",
+      "actualDecision": "ALLOW",
+      "reasonCodes": [],
+      "expectedReasonCodes": [],
+      "correct": true,
+      "semanticConfidence": 1,
+      "latencyMs": 13583,
+      "subtotal": 9999
+    },
+    {
+      "id": "eval_G_235",
+      "split": "validation",
+      "evalClass": "G",
+      "expectedDecision": "ALLOW",
+      "actualDecision": "ALLOW",
+      "reasonCodes": [],
+      "expectedReasonCodes": [],
+      "correct": true,
+      "semanticConfidence": 1,
+      "latencyMs": 13719,
+      "subtotal": 9999
+    },
+    {
+      "id": "eval_H_236",
+      "split": "held-out",
+      "evalClass": "H",
+      "expectedDecision": "STEP_UP",
+      "actualDecision": "STEP_UP",
+      "reasonCodes": [
+        "SEMANTIC_LOW_CONFIDENCE"
+      ],
+      "expectedReasonCodes": [
+        "SEMANTIC_LOW_CONFIDENCE"
+      ],
+      "correct": true,
+      "semanticConfidence": 0.8,
+      "latencyMs": 13460,
+      "subtotal": 399
+    },
+    {
+      "id": "eval_H_237",
+      "split": "validation",
+      "evalClass": "H",
+      "expectedDecision": "STEP_UP",
+      "actualDecision": "ALLOW",
+      "reasonCodes": [],
+      "expectedReasonCodes": [
+        "SEMANTIC_LOW_CONFIDENCE"
+      ],
+      "correct": false,
+      "semanticConfidence": 1,
+      "latencyMs": 13867,
+      "subtotal": 6999
+    },
+    {
+      "id": "eval_H_238",
+      "split": "held-out",
+      "evalClass": "H",
+      "expectedDecision": "STEP_UP",
+      "actualDecision": "ALLOW",
+      "reasonCodes": [],
+      "expectedReasonCodes": [
+        "SEMANTIC_LOW_CONFIDENCE"
+      ],
+      "correct": false,
+      "semanticConfidence": 1,
+      "latencyMs": 9520,
+      "subtotal": 599
+    },
+    {
+      "id": "eval_H_239",
+      "split": "held-out",
+      "evalClass": "H",
+      "expectedDecision": "STEP_UP",
+      "actualDecision": "ALLOW",
+      "reasonCodes": [],
+      "expectedReasonCodes": [
+        "SEMANTIC_LOW_CONFIDENCE"
+      ],
+      "correct": false,
+      "semanticConfidence": 1,
+      "latencyMs": 13674,
+      "subtotal": 1999
+    },
+    {
+      "id": "eval_H_240",
+      "split": "validation",
+      "evalClass": "H",
+      "expectedDecision": "STEP_UP",
+      "actualDecision": "ALLOW",
+      "reasonCodes": [],
+      "expectedReasonCodes": [
+        "SEMANTIC_LOW_CONFIDENCE"
+      ],
+      "correct": false,
+      "semanticConfidence": 1,
+      "latencyMs": 13545,
+      "subtotal": 1999
+    },
+    {
+      "id": "eval_LEGIT_001",
+      "split": "held-out",
+      "evalClass": "LEGIT",
+      "expectedDecision": "ALLOW",
+      "actualDecision": "ALLOW",
+      "reasonCodes": [],
+      "expectedReasonCodes": [],
+      "correct": true,
+      "semanticConfidence": 1,
+      "latencyMs": 8834,
+      "subtotal": 599
+    },
+    {
+      "id": "eval_LEGIT_002",
+      "split": "validation",
+      "evalClass": "LEGIT",
+      "expectedDecision": "ALLOW",
+      "actualDecision": "ALLOW",
+      "reasonCodes": [],
+      "expectedReasonCodes": [],
+      "correct": true,
+      "semanticConfidence": 1,
+      "latencyMs": 13806,
+      "subtotal": 6999
+    },
+    {
+      "id": "eval_LEGIT_003",
+      "split": "held-out",
+      "evalClass": "LEGIT",
+      "expectedDecision": "ALLOW",
+      "actualDecision": "ALLOW",
+      "reasonCodes": [],
+      "expectedReasonCodes": [],
+      "correct": true,
+      "semanticConfidence": 1,
+      "latencyMs": 13632,
+      "subtotal": 6999
+    },
+    {
+      "id": "eval_LEGIT_004",
+      "split": "held-out",
+      "evalClass": "LEGIT",
+      "expectedDecision": "ALLOW",
+      "actualDecision": "ALLOW",
+      "reasonCodes": [],
+      "expectedReasonCodes": [],
+      "correct": true,
+      "semanticConfidence": 1,
+      "latencyMs": 13598,
+      "subtotal": 6999
+    },
+    {
+      "id": "eval_LEGIT_005",
+      "split": "dev",
+      "evalClass": "LEGIT",
+      "expectedDecision": "ALLOW",
+      "actualDecision": "ALLOW",
+      "reasonCodes": [],
+      "expectedReasonCodes": [],
+      "correct": true,
+      "semanticConfidence": 1,
+      "latencyMs": 13949,
+      "subtotal": 2999
+    },
+    {
+      "id": "eval_LEGIT_006",
+      "split": "dev",
+      "evalClass": "LEGIT",
+      "expectedDecision": "ALLOW",
+      "actualDecision": "ALLOW",
+      "reasonCodes": [],
+      "expectedReasonCodes": [],
+      "correct": true,
+      "semanticConfidence": 1,
+      "latencyMs": 14011,
+      "subtotal": 12999
+    },
+    {
+      "id": "eval_LEGIT_007",
+      "split": "held-out",
+      "evalClass": "LEGIT",
+      "expectedDecision": "ALLOW",
+      "actualDecision": "ALLOW",
+      "reasonCodes": [],
+      "expectedReasonCodes": [],
+      "correct": true,
+      "semanticConfidence": 1,
+      "latencyMs": 13697,
+      "subtotal": 1499
+    },
+    {
+      "id": "eval_LEGIT_008",
+      "split": "held-out",
+      "evalClass": "LEGIT",
+      "expectedDecision": "ALLOW",
+      "actualDecision": "ALLOW",
+      "reasonCodes": [],
+      "expectedReasonCodes": [],
+      "correct": true,
+      "semanticConfidence": 1,
+      "latencyMs": 11532,
+      "subtotal": 599
+    },
+    {
+      "id": "eval_LEGIT_009",
+      "split": "dev",
+      "evalClass": "LEGIT",
+      "expectedDecision": "ALLOW",
+      "actualDecision": "ALLOW",
+      "reasonCodes": [],
+      "expectedReasonCodes": [],
+      "correct": true,
+      "semanticConfidence": 1,
+      "latencyMs": 13746,
+      "subtotal": 7499
+    },
+    {
+      "id": "eval_LEGIT_010",
+      "split": "held-out",
+      "evalClass": "LEGIT",
+      "expectedDecision": "ALLOW",
+      "actualDecision": "ALLOW",
+      "reasonCodes": [],
+      "expectedReasonCodes": [],
+      "correct": true,
+      "semanticConfidence": 1,
+      "latencyMs": 14498,
+      "subtotal": 999
+    },
+    {
+      "id": "eval_LEGIT_011",
+      "split": "dev",
+      "evalClass": "LEGIT",
+      "expectedDecision": "ALLOW",
+      "actualDecision": "ALLOW",
+      "reasonCodes": [],
+      "expectedReasonCodes": [],
+      "correct": true,
+      "semanticConfidence": 1,
+      "latencyMs": 13830,
+      "subtotal": 1999
+    },
+    {
+      "id": "eval_LEGIT_012",
+      "split": "held-out",
+      "evalClass": "LEGIT",
+      "expectedDecision": "ALLOW",
+      "actualDecision": "ALLOW",
+      "reasonCodes": [],
+      "expectedReasonCodes": [],
+      "correct": true,
+      "semanticConfidence": 1,
+      "latencyMs": 13809,
+      "subtotal": 7499
+    },
+    {
+      "id": "eval_LEGIT_013",
+      "split": "validation",
+      "evalClass": "LEGIT",
+      "expectedDecision": "ALLOW",
+      "actualDecision": "ALLOW",
+      "reasonCodes": [],
+      "expectedReasonCodes": [],
+      "correct": true,
+      "semanticConfidence": 1,
+      "latencyMs": 14125,
+      "subtotal": 9998
+    },
+    {
+      "id": "eval_LEGIT_014",
+      "split": "validation",
+      "evalClass": "LEGIT",
+      "expectedDecision": "ALLOW",
+      "actualDecision": "ALLOW",
+      "reasonCodes": [],
+      "expectedReasonCodes": [],
+      "correct": true,
+      "semanticConfidence": 1,
+      "latencyMs": 14052,
+      "subtotal": 25998
+    },
+    {
+      "id": "eval_LEGIT_015",
+      "split": "held-out",
+      "evalClass": "LEGIT",
+      "expectedDecision": "ALLOW",
+      "actualDecision": "ALLOW",
+      "reasonCodes": [],
+      "expectedReasonCodes": [],
+      "correct": true,
+      "semanticConfidence": 1,
+      "latencyMs": 13271,
+      "subtotal": 1799
+    },
+    {
+      "id": "eval_LEGIT_016",
+      "split": "validation",
+      "evalClass": "LEGIT",
+      "expectedDecision": "ALLOW",
+      "actualDecision": "ALLOW",
+      "reasonCodes": [],
+      "expectedReasonCodes": [],
+      "correct": true,
+      "semanticConfidence": 1,
+      "latencyMs": 14051,
+      "subtotal": 2999
+    },
+    {
+      "id": "eval_LEGIT_017",
+      "split": "dev",
+      "evalClass": "LEGIT",
+      "expectedDecision": "ALLOW",
+      "actualDecision": "ALLOW",
+      "reasonCodes": [],
+      "expectedReasonCodes": [],
+      "correct": true,
+      "semanticConfidence": 1,
+      "latencyMs": 13864,
+      "subtotal": 13999
+    },
+    {
+      "id": "eval_LEGIT_018",
+      "split": "held-out",
+      "evalClass": "LEGIT",
+      "expectedDecision": "ALLOW",
+      "actualDecision": "ALLOW",
+      "reasonCodes": [],
+      "expectedReasonCodes": [],
+      "correct": true,
+      "semanticConfidence": 1,
+      "latencyMs": 13652,
+      "subtotal": 1499
+    },
+    {
+      "id": "eval_LEGIT_019",
+      "split": "held-out",
+      "evalClass": "LEGIT",
+      "expectedDecision": "ALLOW",
+      "actualDecision": "ALLOW",
+      "reasonCodes": [],
+      "expectedReasonCodes": [],
+      "correct": true,
+      "semanticConfidence": 1,
+      "latencyMs": 14058,
+      "subtotal": 599
+    },
+    {
+      "id": "eval_LEGIT_020",
+      "split": "held-out",
+      "evalClass": "LEGIT",
+      "expectedDecision": "ALLOW",
+      "actualDecision": "ALLOW",
+      "reasonCodes": [],
+      "expectedReasonCodes": [],
+      "correct": true,
+      "semanticConfidence": 1,
+      "latencyMs": 19456,
+      "subtotal": 4998
+    },
+    {
+      "id": "eval_LEGIT_021",
+      "split": "dev",
+      "evalClass": "LEGIT",
+      "expectedDecision": "ALLOW",
+      "actualDecision": "ALLOW",
+      "reasonCodes": [],
+      "expectedReasonCodes": [],
+      "correct": true,
+      "semanticConfidence": 1,
+      "latencyMs": 13795,
+      "subtotal": 1499
+    },
+    {
+      "id": "eval_LEGIT_022",
+      "split": "held-out",
+      "evalClass": "LEGIT",
+      "expectedDecision": "ALLOW",
+      "actualDecision": "ALLOW",
+      "reasonCodes": [],
+      "expectedReasonCodes": [],
+      "correct": true,
+      "semanticConfidence": 1,
+      "latencyMs": 14306,
+      "subtotal": 1298
+    },
+    {
+      "id": "eval_LEGIT_023",
+      "split": "dev",
+      "evalClass": "LEGIT",
+      "expectedDecision": "ALLOW",
+      "actualDecision": "ALLOW",
+      "reasonCodes": [],
+      "expectedReasonCodes": [],
+      "correct": true,
+      "semanticConfidence": 1,
+      "latencyMs": 13089,
+      "subtotal": 798
+    },
+    {
+      "id": "eval_LEGIT_024",
+      "split": "held-out",
+      "evalClass": "LEGIT",
+      "expectedDecision": "ALLOW",
+      "actualDecision": "ALLOW",
+      "reasonCodes": [],
+      "expectedReasonCodes": [],
+      "correct": true,
+      "semanticConfidence": 1,
+      "latencyMs": 13705,
+      "subtotal": 9998
+    },
+    {
+      "id": "eval_LEGIT_025",
+      "split": "held-out",
+      "evalClass": "LEGIT",
+      "expectedDecision": "ALLOW",
+      "actualDecision": "ALLOW",
+      "reasonCodes": [],
+      "expectedReasonCodes": [],
+      "correct": true,
+      "semanticConfidence": 1,
+      "latencyMs": 9698,
+      "subtotal": 1299
+    },
+    {
+      "id": "eval_LEGIT_026",
+      "split": "dev",
+      "evalClass": "LEGIT",
+      "expectedDecision": "ALLOW",
+      "actualDecision": "ALLOW",
+      "reasonCodes": [],
+      "expectedReasonCodes": [],
+      "correct": true,
+      "semanticConfidence": 1,
+      "latencyMs": 13832,
+      "subtotal": 2999
+    },
+    {
+      "id": "eval_LEGIT_027",
+      "split": "dev",
+      "evalClass": "LEGIT",
+      "expectedDecision": "ALLOW",
+      "actualDecision": "ALLOW",
+      "reasonCodes": [],
+      "expectedReasonCodes": [],
+      "correct": true,
+      "semanticConfidence": 1,
+      "latencyMs": 13934,
+      "subtotal": 599
+    },
+    {
+      "id": "eval_LEGIT_028",
+      "split": "dev",
+      "evalClass": "LEGIT",
+      "expectedDecision": "ALLOW",
+      "actualDecision": "ALLOW",
+      "reasonCodes": [],
+      "expectedReasonCodes": [],
+      "correct": true,
+      "semanticConfidence": 1,
+      "latencyMs": 13847,
+      "subtotal": 999
+    },
+    {
+      "id": "eval_LEGIT_029",
+      "split": "held-out",
+      "evalClass": "LEGIT",
+      "expectedDecision": "ALLOW",
+      "actualDecision": "ALLOW",
+      "reasonCodes": [],
+      "expectedReasonCodes": [],
+      "correct": true,
+      "semanticConfidence": 1,
+      "latencyMs": 14051,
+      "subtotal": 289
+    },
+    {
+      "id": "eval_LEGIT_030",
+      "split": "validation",
+      "evalClass": "LEGIT",
+      "expectedDecision": "ALLOW",
+      "actualDecision": "ALLOW",
+      "reasonCodes": [],
+      "expectedReasonCodes": [],
+      "correct": true,
+      "semanticConfidence": 1,
+      "latencyMs": 13871,
+      "subtotal": 449
+    },
+    {
+      "id": "eval_LEGIT_031",
+      "split": "held-out",
+      "evalClass": "LEGIT",
+      "expectedDecision": "ALLOW",
+      "actualDecision": "ALLOW",
+      "reasonCodes": [],
+      "expectedReasonCodes": [],
+      "correct": true,
+      "semanticConfidence": 1,
+      "latencyMs": 10090,
+      "subtotal": 1299
+    },
+    {
+      "id": "eval_LEGIT_032",
+      "split": "held-out",
+      "evalClass": "LEGIT",
+      "expectedDecision": "ALLOW",
+      "actualDecision": "ALLOW",
+      "reasonCodes": [],
+      "expectedReasonCodes": [],
+      "correct": true,
+      "semanticConfidence": 1,
+      "latencyMs": 10341,
+      "subtotal": 1899
+    },
+    {
+      "id": "eval_LEGIT_033",
+      "split": "held-out",
+      "evalClass": "LEGIT",
+      "expectedDecision": "ALLOW",
+      "actualDecision": "ALLOW",
+      "reasonCodes": [],
+      "expectedReasonCodes": [],
+      "correct": true,
+      "semanticConfidence": 1,
+      "latencyMs": 13554,
+      "subtotal": 1799
+    },
+    {
+      "id": "eval_LEGIT_034",
+      "split": "held-out",
+      "evalClass": "LEGIT",
+      "expectedDecision": "ALLOW",
+      "actualDecision": "ALLOW",
+      "reasonCodes": [],
+      "expectedReasonCodes": [],
+      "correct": true,
+      "semanticConfidence": 1,
+      "latencyMs": 13780,
+      "subtotal": 599
+    },
+    {
+      "id": "eval_LEGIT_035",
+      "split": "held-out",
+      "evalClass": "LEGIT",
+      "expectedDecision": "ALLOW",
+      "actualDecision": "ALLOW",
+      "reasonCodes": [],
+      "expectedReasonCodes": [],
+      "correct": true,
+      "semanticConfidence": 1,
+      "latencyMs": 13622,
+      "subtotal": 4999
+    },
+    {
+      "id": "eval_LEGIT_036",
+      "split": "held-out",
+      "evalClass": "LEGIT",
+      "expectedDecision": "ALLOW",
+      "actualDecision": "ALLOW",
+      "reasonCodes": [],
+      "expectedReasonCodes": [],
+      "correct": true,
+      "semanticConfidence": 1,
+      "latencyMs": 30282,
+      "subtotal": 599
+    },
+    {
+      "id": "eval_LEGIT_037",
+      "split": "held-out",
+      "evalClass": "LEGIT",
+      "expectedDecision": "ALLOW",
+      "actualDecision": "ALLOW",
+      "reasonCodes": [],
+      "expectedReasonCodes": [],
+      "correct": true,
+      "semanticConfidence": 1,
+      "latencyMs": 14191,
+      "subtotal": 379
+    },
+    {
+      "id": "eval_LEGIT_038",
+      "split": "held-out",
+      "evalClass": "LEGIT",
+      "expectedDecision": "ALLOW",
+      "actualDecision": "ALLOW",
+      "reasonCodes": [],
+      "expectedReasonCodes": [],
+      "correct": true,
+      "semanticConfidence": 1,
+      "latencyMs": 13513,
+      "subtotal": 289
+    },
+    {
+      "id": "eval_LEGIT_039",
+      "split": "held-out",
+      "evalClass": "LEGIT",
+      "expectedDecision": "ALLOW",
+      "actualDecision": "ALLOW",
+      "reasonCodes": [],
+      "expectedReasonCodes": [],
+      "correct": true,
+      "semanticConfidence": 1,
+      "latencyMs": 14122,
+      "subtotal": 2999
+    },
+    {
+      "id": "eval_LEGIT_040",
+      "split": "held-out",
+      "evalClass": "LEGIT",
+      "expectedDecision": "ALLOW",
+      "actualDecision": "ALLOW",
+      "reasonCodes": [],
+      "expectedReasonCodes": [],
+      "correct": true,
+      "semanticConfidence": 1,
+      "latencyMs": 13757,
+      "subtotal": 999
+    },
+    {
+      "id": "eval_LEGIT_041",
+      "split": "dev",
+      "evalClass": "LEGIT",
+      "expectedDecision": "ALLOW",
+      "actualDecision": "ALLOW",
+      "reasonCodes": [],
+      "expectedReasonCodes": [],
+      "correct": true,
+      "semanticConfidence": 1,
+      "latencyMs": 13823,
+      "subtotal": 2999
+    },
+    {
+      "id": "eval_LEGIT_042",
+      "split": "held-out",
+      "evalClass": "LEGIT",
+      "expectedDecision": "ALLOW",
+      "actualDecision": "ALLOW",
+      "reasonCodes": [],
+      "expectedReasonCodes": [],
+      "correct": true,
+      "semanticConfidence": 1,
+      "latencyMs": 14309,
+      "subtotal": 9998
+    },
+    {
+      "id": "eval_LEGIT_043",
+      "split": "dev",
+      "evalClass": "LEGIT",
+      "expectedDecision": "ALLOW",
+      "actualDecision": "ALLOW",
+      "reasonCodes": [],
+      "expectedReasonCodes": [],
+      "correct": true,
+      "semanticConfidence": 1,
+      "latencyMs": 13630,
+      "subtotal": 12999
+    },
+    {
+      "id": "eval_LEGIT_044",
+      "split": "held-out",
+      "evalClass": "LEGIT",
+      "expectedDecision": "ALLOW",
+      "actualDecision": "ALLOW",
+      "reasonCodes": [],
+      "expectedReasonCodes": [],
+      "correct": true,
+      "semanticConfidence": 1,
+      "latencyMs": 14247,
+      "subtotal": 7499
+    },
+    {
+      "id": "eval_LEGIT_045",
+      "split": "validation",
+      "evalClass": "LEGIT",
+      "expectedDecision": "ALLOW",
+      "actualDecision": "ALLOW",
+      "reasonCodes": [],
+      "expectedReasonCodes": [],
+      "correct": true,
+      "semanticConfidence": 1,
+      "latencyMs": 13789,
+      "subtotal": 599
+    },
+    {
+      "id": "eval_LEGIT_046",
+      "split": "held-out",
+      "evalClass": "LEGIT",
+      "expectedDecision": "ALLOW",
+      "actualDecision": "ALLOW",
+      "reasonCodes": [],
+      "expectedReasonCodes": [],
+      "correct": true,
+      "semanticConfidence": 1,
+      "latencyMs": 13769,
+      "subtotal": 1999
+    },
+    {
+      "id": "eval_LEGIT_047",
+      "split": "validation",
+      "evalClass": "LEGIT",
+      "expectedDecision": "ALLOW",
+      "actualDecision": "ALLOW",
+      "reasonCodes": [],
+      "expectedReasonCodes": [],
+      "correct": true,
+      "semanticConfidence": 1,
+      "latencyMs": 13610,
+      "subtotal": 399
+    },
+    {
+      "id": "eval_LEGIT_048",
+      "split": "dev",
+      "evalClass": "LEGIT",
+      "expectedDecision": "ALLOW",
+      "actualDecision": "ALLOW",
+      "reasonCodes": [],
+      "expectedReasonCodes": [],
+      "correct": true,
+      "semanticConfidence": 1,
+      "latencyMs": 14388,
+      "subtotal": 13998
+    },
+    {
+      "id": "eval_LEGIT_049",
+      "split": "validation",
+      "evalClass": "LEGIT",
+      "expectedDecision": "ALLOW",
+      "actualDecision": "ALLOW",
+      "reasonCodes": [],
+      "expectedReasonCodes": [],
+      "correct": true,
+      "semanticConfidence": 1,
+      "latencyMs": 13792,
+      "subtotal": 7499
+    },
+    {
+      "id": "eval_LEGIT_050",
+      "split": "held-out",
+      "evalClass": "LEGIT",
+      "expectedDecision": "ALLOW",
+      "actualDecision": "ALLOW",
+      "reasonCodes": [],
+      "expectedReasonCodes": [],
+      "correct": true,
+      "semanticConfidence": 1,
+      "latencyMs": 13740,
+      "subtotal": 2499
+    },
+    {
+      "id": "eval_LEGIT_051",
+      "split": "held-out",
+      "evalClass": "LEGIT",
+      "expectedDecision": "ALLOW",
+      "actualDecision": "ALLOW",
+      "reasonCodes": [],
+      "expectedReasonCodes": [],
+      "correct": true,
+      "semanticConfidence": 1,
+      "latencyMs": 14098,
+      "subtotal": 12999
+    },
+    {
+      "id": "eval_LEGIT_052",
+      "split": "validation",
+      "evalClass": "LEGIT",
+      "expectedDecision": "ALLOW",
+      "actualDecision": "ALLOW",
+      "reasonCodes": [],
+      "expectedReasonCodes": [],
+      "correct": true,
+      "semanticConfidence": 1,
+      "latencyMs": 13770,
+      "subtotal": 1499
+    },
+    {
+      "id": "eval_LEGIT_053",
+      "split": "validation",
+      "evalClass": "LEGIT",
+      "expectedDecision": "ALLOW",
+      "actualDecision": "ALLOW",
+      "reasonCodes": [],
+      "expectedReasonCodes": [],
+      "correct": true,
+      "semanticConfidence": 1,
+      "latencyMs": 13582,
+      "subtotal": 289
+    },
+    {
+      "id": "eval_LEGIT_054",
+      "split": "held-out",
+      "evalClass": "LEGIT",
+      "expectedDecision": "ALLOW",
+      "actualDecision": "ALLOW",
+      "reasonCodes": [],
+      "expectedReasonCodes": [],
+      "correct": true,
+      "semanticConfidence": 1,
+      "latencyMs": 11562,
+      "subtotal": 1899
+    },
+    {
+      "id": "eval_LEGIT_055",
+      "split": "held-out",
+      "evalClass": "LEGIT",
+      "expectedDecision": "ALLOW",
+      "actualDecision": "ALLOW",
+      "reasonCodes": [],
+      "expectedReasonCodes": [],
+      "correct": true,
+      "semanticConfidence": 1,
+      "latencyMs": 6172,
+      "subtotal": 399
+    },
+    {
+      "id": "eval_LEGIT_056",
+      "split": "dev",
+      "evalClass": "LEGIT",
+      "expectedDecision": "ALLOW",
+      "actualDecision": "ALLOW",
+      "reasonCodes": [],
+      "expectedReasonCodes": [],
+      "correct": true,
+      "semanticConfidence": 1,
+      "latencyMs": 13843,
+      "subtotal": 4999
+    },
+    {
+      "id": "eval_LEGIT_057",
+      "split": "held-out",
+      "evalClass": "LEGIT",
+      "expectedDecision": "ALLOW",
+      "actualDecision": "ALLOW",
+      "reasonCodes": [],
+      "expectedReasonCodes": [],
+      "correct": true,
+      "semanticConfidence": 1,
+      "latencyMs": 13102,
+      "subtotal": 599
+    },
+    {
+      "id": "eval_LEGIT_058",
+      "split": "held-out",
+      "evalClass": "LEGIT",
+      "expectedDecision": "ALLOW",
+      "actualDecision": "ALLOW",
+      "reasonCodes": [],
+      "expectedReasonCodes": [],
+      "correct": true,
+      "semanticConfidence": 1,
+      "latencyMs": 9232,
+      "subtotal": 1899
+    },
+    {
+      "id": "eval_LEGIT_059",
+      "split": "dev",
+      "evalClass": "LEGIT",
+      "expectedDecision": "ALLOW",
+      "actualDecision": "ALLOW",
+      "reasonCodes": [],
+      "expectedReasonCodes": [],
+      "correct": true,
+      "semanticConfidence": 1,
+      "latencyMs": 13798,
+      "subtotal": 599
+    },
+    {
+      "id": "eval_LEGIT_060",
+      "split": "dev",
+      "evalClass": "LEGIT",
+      "expectedDecision": "ALLOW",
+      "actualDecision": "ALLOW",
+      "reasonCodes": [],
+      "expectedReasonCodes": [],
+      "correct": true,
+      "semanticConfidence": 1,
+      "latencyMs": 12716,
+      "subtotal": 7499
+    },
+    {
+      "id": "eval_LEGIT_061",
+      "split": "dev",
+      "evalClass": "LEGIT",
+      "expectedDecision": "ALLOW",
+      "actualDecision": "ALLOW",
+      "reasonCodes": [],
+      "expectedReasonCodes": [],
+      "correct": true,
+      "semanticConfidence": 1,
+      "latencyMs": 13854,
+      "subtotal": 999
+    },
+    {
+      "id": "eval_LEGIT_062",
+      "split": "held-out",
+      "evalClass": "LEGIT",
+      "expectedDecision": "ALLOW",
+      "actualDecision": "ALLOW",
+      "reasonCodes": [],
+      "expectedReasonCodes": [],
+      "correct": true,
+      "semanticConfidence": 1,
+      "latencyMs": 13885,
+      "subtotal": 289
+    },
+    {
+      "id": "eval_LEGIT_063",
+      "split": "validation",
+      "evalClass": "LEGIT",
+      "expectedDecision": "ALLOW",
+      "actualDecision": "ALLOW",
+      "reasonCodes": [],
+      "expectedReasonCodes": [],
+      "correct": true,
+      "semanticConfidence": 1,
+      "latencyMs": 13992,
+      "subtotal": 9998
+    },
+    {
+      "id": "eval_LEGIT_064",
+      "split": "held-out",
+      "evalClass": "LEGIT",
+      "expectedDecision": "ALLOW",
+      "actualDecision": "ALLOW",
+      "reasonCodes": [],
+      "expectedReasonCodes": [],
+      "correct": true,
+      "semanticConfidence": 1,
+      "latencyMs": 13594,
+      "subtotal": 6598
+    },
+    {
+      "id": "eval_LEGIT_065",
+      "split": "held-out",
+      "evalClass": "LEGIT",
+      "expectedDecision": "ALLOW",
+      "actualDecision": "ALLOW",
+      "reasonCodes": [],
+      "expectedReasonCodes": [],
+      "correct": true,
+      "semanticConfidence": 1,
+      "latencyMs": 14011,
+      "subtotal": 2598
+    },
+    {
+      "id": "eval_LEGIT_066",
+      "split": "validation",
+      "evalClass": "LEGIT",
+      "expectedDecision": "ALLOW",
+      "actualDecision": "ALLOW",
+      "reasonCodes": [],
+      "expectedReasonCodes": [],
+      "correct": true,
+      "semanticConfidence": 1,
+      "latencyMs": 13769,
+      "subtotal": 349
+    },
+    {
+      "id": "eval_LEGIT_067",
+      "split": "held-out",
+      "evalClass": "LEGIT",
+      "expectedDecision": "ALLOW",
+      "actualDecision": "ALLOW",
+      "reasonCodes": [],
+      "expectedReasonCodes": [],
+      "correct": true,
+      "semanticConfidence": 1,
+      "latencyMs": 13963,
+      "subtotal": 1999
+    },
+    {
+      "id": "eval_LEGIT_068",
+      "split": "dev",
+      "evalClass": "LEGIT",
+      "expectedDecision": "ALLOW",
+      "actualDecision": "ALLOW",
+      "reasonCodes": [],
+      "expectedReasonCodes": [],
+      "correct": true,
+      "semanticConfidence": 1,
+      "latencyMs": 14465,
+      "subtotal": 3299
+    },
+    {
+      "id": "eval_LEGIT_069",
+      "split": "held-out",
+      "evalClass": "LEGIT",
+      "expectedDecision": "ALLOW",
+      "actualDecision": "ALLOW",
+      "reasonCodes": [],
+      "expectedReasonCodes": [],
+      "correct": true,
+      "semanticConfidence": 1,
+      "latencyMs": 29449,
+      "subtotal": 898
+    },
+    {
+      "id": "eval_LEGIT_070",
+      "split": "validation",
+      "evalClass": "LEGIT",
+      "expectedDecision": "ALLOW",
+      "actualDecision": "ALLOW",
+      "reasonCodes": [],
+      "expectedReasonCodes": [],
+      "correct": true,
+      "semanticConfidence": 1,
+      "latencyMs": 13989,
+      "subtotal": 2998
+    },
+    {
+      "id": "eval_LEGIT_071",
+      "split": "dev",
+      "evalClass": "LEGIT",
+      "expectedDecision": "ALLOW",
+      "actualDecision": "ALLOW",
+      "reasonCodes": [],
+      "expectedReasonCodes": [],
+      "correct": true,
+      "semanticConfidence": 1,
+      "latencyMs": 10030,
+      "subtotal": 698
+    },
+    {
+      "id": "eval_LEGIT_072",
+      "split": "held-out",
+      "evalClass": "LEGIT",
+      "expectedDecision": "ALLOW",
+      "actualDecision": "ALLOW",
+      "reasonCodes": [],
+      "expectedReasonCodes": [],
+      "correct": true,
+      "semanticConfidence": 1,
+      "latencyMs": 13838,
+      "subtotal": 9998
+    },
+    {
+      "id": "eval_LEGIT_073",
+      "split": "dev",
+      "evalClass": "LEGIT",
+      "expectedDecision": "ALLOW",
+      "actualDecision": "ALLOW",
+      "reasonCodes": [],
+      "expectedReasonCodes": [],
+      "correct": true,
+      "semanticConfidence": 1,
+      "latencyMs": 15062,
+      "subtotal": 449
+    },
+    {
+      "id": "eval_LEGIT_074",
+      "split": "held-out",
+      "evalClass": "LEGIT",
+      "expectedDecision": "ALLOW",
+      "actualDecision": "ALLOW",
+      "reasonCodes": [],
+      "expectedReasonCodes": [],
+      "correct": true,
+      "semanticConfidence": 1,
+      "latencyMs": 13810,
+      "subtotal": 449
+    },
+    {
+      "id": "eval_LEGIT_075",
+      "split": "dev",
+      "evalClass": "LEGIT",
+      "expectedDecision": "ALLOW",
+      "actualDecision": "ALLOW",
+      "reasonCodes": [],
+      "expectedReasonCodes": [],
+      "correct": true,
+      "semanticConfidence": 1,
+      "latencyMs": 13953,
+      "subtotal": 1799
+    },
+    {
+      "id": "eval_LEGIT_076",
+      "split": "held-out",
+      "evalClass": "LEGIT",
+      "expectedDecision": "ALLOW",
+      "actualDecision": "ALLOW",
+      "reasonCodes": [],
+      "expectedReasonCodes": [],
+      "correct": true,
+      "semanticConfidence": 1,
+      "latencyMs": 13554,
+      "subtotal": 2999
+    },
+    {
+      "id": "eval_LEGIT_077",
+      "split": "dev",
+      "evalClass": "LEGIT",
+      "expectedDecision": "ALLOW",
+      "actualDecision": "ALLOW",
+      "reasonCodes": [],
+      "expectedReasonCodes": [],
+      "correct": true,
+      "semanticConfidence": 1,
+      "latencyMs": 13790,
+      "subtotal": 2499
+    },
+    {
+      "id": "eval_LEGIT_078",
+      "split": "validation",
+      "evalClass": "LEGIT",
+      "expectedDecision": "ALLOW",
+      "actualDecision": "ALLOW",
+      "reasonCodes": [],
+      "expectedReasonCodes": [],
+      "correct": true,
+      "semanticConfidence": 1,
+      "latencyMs": 13922,
+      "subtotal": 1499
+    },
+    {
+      "id": "eval_LEGIT_079",
+      "split": "held-out",
+      "evalClass": "LEGIT",
+      "expectedDecision": "ALLOW",
+      "actualDecision": "ALLOW",
+      "reasonCodes": [],
+      "expectedReasonCodes": [],
+      "correct": true,
+      "semanticConfidence": 1,
+      "latencyMs": 13149,
+      "subtotal": 599
+    },
+    {
+      "id": "eval_LEGIT_080",
+      "split": "dev",
+      "evalClass": "LEGIT",
+      "expectedDecision": "ALLOW",
+      "actualDecision": "ALLOW",
+      "reasonCodes": [],
+      "expectedReasonCodes": [],
+      "correct": true,
+      "semanticConfidence": 1,
+      "latencyMs": 14161,
+      "subtotal": 749
+    },
+    {
+      "id": "eval_LEGIT_081",
+      "split": "held-out",
+      "evalClass": "LEGIT",
+      "expectedDecision": "ALLOW",
+      "actualDecision": "ALLOW",
+      "reasonCodes": [],
+      "expectedReasonCodes": [],
+      "correct": true,
+      "semanticConfidence": 1,
+      "latencyMs": 13653,
+      "subtotal": 798
+    },
+    {
+      "id": "eval_LEGIT_082",
+      "split": "held-out",
+      "evalClass": "LEGIT",
+      "expectedDecision": "ALLOW",
+      "actualDecision": "ALLOW",
+      "reasonCodes": [],
+      "expectedReasonCodes": [],
+      "correct": true,
+      "semanticConfidence": 1,
+      "latencyMs": 13847,
+      "subtotal": 3299
+    },
+    {
+      "id": "eval_LEGIT_083",
+      "split": "held-out",
+      "evalClass": "LEGIT",
+      "expectedDecision": "ALLOW",
+      "actualDecision": "ALLOW",
+      "reasonCodes": [],
+      "expectedReasonCodes": [],
+      "correct": true,
+      "semanticConfidence": 1,
+      "latencyMs": 13835,
+      "subtotal": 1298
+    },
+    {
+      "id": "eval_LEGIT_084",
+      "split": "validation",
+      "evalClass": "LEGIT",
+      "expectedDecision": "ALLOW",
+      "actualDecision": "ALLOW",
+      "reasonCodes": [],
+      "expectedReasonCodes": [],
+      "correct": true,
+      "semanticConfidence": 1,
+      "latencyMs": 13853,
+      "subtotal": 1499
+    },
+    {
+      "id": "eval_LEGIT_085",
+      "split": "held-out",
+      "evalClass": "LEGIT",
+      "expectedDecision": "ALLOW",
+      "actualDecision": "ALLOW",
+      "reasonCodes": [],
+      "expectedReasonCodes": [],
+      "correct": true,
+      "semanticConfidence": 1,
+      "latencyMs": 14363,
+      "subtotal": 1998
+    },
+    {
+      "id": "eval_LEGIT_086",
+      "split": "held-out",
+      "evalClass": "LEGIT",
+      "expectedDecision": "ALLOW",
+      "actualDecision": "ALLOW",
+      "reasonCodes": [],
+      "expectedReasonCodes": [],
+      "correct": true,
+      "semanticConfidence": 1,
+      "latencyMs": 13592,
+      "subtotal": 1499
+    },
+    {
+      "id": "eval_LEGIT_087",
+      "split": "validation",
+      "evalClass": "LEGIT",
+      "expectedDecision": "ALLOW",
+      "actualDecision": "ALLOW",
+      "reasonCodes": [],
+      "expectedReasonCodes": [],
+      "correct": true,
+      "semanticConfidence": 1,
+      "latencyMs": 10380,
+      "subtotal": 7499
+    },
+    {
+      "id": "eval_LEGIT_088",
+      "split": "dev",
+      "evalClass": "LEGIT",
+      "expectedDecision": "ALLOW",
+      "actualDecision": "ALLOW",
+      "reasonCodes": [],
+      "expectedReasonCodes": [],
+      "correct": true,
+      "semanticConfidence": 1,
+      "latencyMs": 13947,
+      "subtotal": 4999
+    },
+    {
+      "id": "eval_LEGIT_089",
+      "split": "held-out",
+      "evalClass": "LEGIT",
+      "expectedDecision": "ALLOW",
+      "actualDecision": "ALLOW",
+      "reasonCodes": [],
+      "expectedReasonCodes": [],
+      "correct": true,
+      "semanticConfidence": 1,
+      "latencyMs": 12203,
+      "subtotal": 4998
+    },
+    {
+      "id": "eval_LEGIT_090",
+      "split": "validation",
+      "evalClass": "LEGIT",
+      "expectedDecision": "ALLOW",
+      "actualDecision": "ALLOW",
+      "reasonCodes": [],
+      "expectedReasonCodes": [],
+      "correct": true,
+      "semanticConfidence": 1,
+      "latencyMs": 13822,
+      "subtotal": 1499
+    },
+    {
+      "id": "eval_LEGIT_091",
+      "split": "validation",
+      "evalClass": "LEGIT",
+      "expectedDecision": "ALLOW",
+      "actualDecision": "ALLOW",
+      "reasonCodes": [],
+      "expectedReasonCodes": [],
+      "correct": true,
+      "semanticConfidence": 1,
+      "latencyMs": 13762,
+      "subtotal": 379
+    },
+    {
+      "id": "eval_LEGIT_092",
+      "split": "held-out",
+      "evalClass": "LEGIT",
+      "expectedDecision": "ALLOW",
+      "actualDecision": "ALLOW",
+      "reasonCodes": [],
+      "expectedReasonCodes": [],
+      "correct": true,
+      "semanticConfidence": 1,
+      "latencyMs": 13015,
+      "subtotal": 578
+    },
+    {
+      "id": "eval_LEGIT_093",
+      "split": "validation",
+      "evalClass": "LEGIT",
+      "expectedDecision": "ALLOW",
+      "actualDecision": "ALLOW",
+      "reasonCodes": [],
+      "expectedReasonCodes": [],
+      "correct": true,
+      "semanticConfidence": 1,
+      "latencyMs": 13683,
+      "subtotal": 6999
+    },
+    {
+      "id": "eval_LEGIT_094",
+      "split": "held-out",
+      "evalClass": "LEGIT",
+      "expectedDecision": "ALLOW",
+      "actualDecision": "ALLOW",
+      "reasonCodes": [],
+      "expectedReasonCodes": [],
+      "correct": true,
+      "semanticConfidence": 1,
+      "latencyMs": 13457,
+      "subtotal": 1998
+    },
+    {
+      "id": "eval_LEGIT_095",
+      "split": "held-out",
+      "evalClass": "LEGIT",
+      "expectedDecision": "ALLOW",
+      "actualDecision": "ALLOW",
+      "reasonCodes": [],
+      "expectedReasonCodes": [],
+      "correct": true,
+      "semanticConfidence": 1,
+      "latencyMs": 14279,
+      "subtotal": 289
+    },
+    {
+      "id": "eval_LEGIT_096",
+      "split": "dev",
+      "evalClass": "LEGIT",
+      "expectedDecision": "ALLOW",
+      "actualDecision": "ALLOW",
+      "reasonCodes": [],
+      "expectedReasonCodes": [],
+      "correct": true,
+      "semanticConfidence": 1,
+      "latencyMs": 8908,
+      "subtotal": 599
+    },
+    {
+      "id": "eval_LEGIT_097",
+      "split": "validation",
+      "evalClass": "LEGIT",
+      "expectedDecision": "ALLOW",
+      "actualDecision": "ALLOW",
+      "reasonCodes": [],
+      "expectedReasonCodes": [],
+      "correct": true,
+      "semanticConfidence": 1,
+      "latencyMs": 14157,
+      "subtotal": 3299
+    },
+    {
+      "id": "eval_LEGIT_098",
+      "split": "held-out",
+      "evalClass": "LEGIT",
+      "expectedDecision": "ALLOW",
+      "actualDecision": "ALLOW",
+      "reasonCodes": [],
+      "expectedReasonCodes": [],
+      "correct": true,
+      "semanticConfidence": 1,
+      "latencyMs": 14613,
+      "subtotal": 1499
+    },
+    {
+      "id": "eval_LEGIT_099",
+      "split": "held-out",
+      "evalClass": "LEGIT",
+      "expectedDecision": "ALLOW",
+      "actualDecision": "ALLOW",
+      "reasonCodes": [],
+      "expectedReasonCodes": [],
+      "correct": true,
+      "semanticConfidence": 1,
+      "latencyMs": 13625,
+      "subtotal": 13998
+    },
+    {
+      "id": "eval_LEGIT_100",
+      "split": "dev",
+      "evalClass": "LEGIT",
+      "expectedDecision": "ALLOW",
+      "actualDecision": "ALLOW",
+      "reasonCodes": [],
+      "expectedReasonCodes": [],
+      "correct": true,
+      "semanticConfidence": 1,
+      "latencyMs": 13513,
+      "subtotal": 4999
+    },
+    {
+      "id": "eval_LEGIT_101",
+      "split": "validation",
+      "evalClass": "LEGIT",
+      "expectedDecision": "ALLOW",
+      "actualDecision": "ALLOW",
+      "reasonCodes": [],
+      "expectedReasonCodes": [],
+      "correct": true,
+      "semanticConfidence": 1,
+      "latencyMs": 13357,
+      "subtotal": 599
+    },
+    {
+      "id": "eval_LEGIT_102",
+      "split": "held-out",
+      "evalClass": "LEGIT",
+      "expectedDecision": "ALLOW",
+      "actualDecision": "ALLOW",
+      "reasonCodes": [],
+      "expectedReasonCodes": [],
+      "correct": true,
+      "semanticConfidence": 1,
+      "latencyMs": 18995,
+      "subtotal": 2998
+    },
+    {
+      "id": "eval_LEGIT_103",
+      "split": "validation",
+      "evalClass": "LEGIT",
+      "expectedDecision": "ALLOW",
+      "actualDecision": "ALLOW",
+      "reasonCodes": [],
+      "expectedReasonCodes": [],
+      "correct": true,
+      "semanticConfidence": 1,
+      "latencyMs": 9373,
+      "subtotal": 599
+    },
+    {
+      "id": "eval_LEGIT_104",
+      "split": "held-out",
+      "evalClass": "LEGIT",
+      "expectedDecision": "ALLOW",
+      "actualDecision": "ALLOW",
+      "reasonCodes": [],
+      "expectedReasonCodes": [],
+      "correct": true,
+      "semanticConfidence": 1,
+      "latencyMs": 4730,
+      "subtotal": 1499
+    },
+    {
+      "id": "eval_LEGIT_105",
+      "split": "held-out",
+      "evalClass": "LEGIT",
+      "expectedDecision": "ALLOW",
+      "actualDecision": "ALLOW",
+      "reasonCodes": [],
+      "expectedReasonCodes": [],
+      "correct": true,
+      "semanticConfidence": 1,
+      "latencyMs": 14183,
+      "subtotal": 25998
+    },
+    {
+      "id": "eval_LEGIT_106",
+      "split": "dev",
+      "evalClass": "LEGIT",
+      "expectedDecision": "ALLOW",
+      "actualDecision": "ALLOW",
+      "reasonCodes": [],
+      "expectedReasonCodes": [],
+      "correct": true,
+      "semanticConfidence": 1,
+      "latencyMs": 13901,
+      "subtotal": 449
+    },
+    {
+      "id": "eval_LEGIT_107",
+      "split": "held-out",
+      "evalClass": "LEGIT",
+      "expectedDecision": "ALLOW",
+      "actualDecision": "ALLOW",
+      "reasonCodes": [],
+      "expectedReasonCodes": [],
+      "correct": true,
+      "semanticConfidence": 1,
+      "latencyMs": 14100,
+      "subtotal": 4999
+    },
+    {
+      "id": "eval_LEGIT_108",
+      "split": "dev",
+      "evalClass": "LEGIT",
+      "expectedDecision": "ALLOW",
+      "actualDecision": "ALLOW",
+      "reasonCodes": [],
+      "expectedReasonCodes": [],
+      "correct": true,
+      "semanticConfidence": 1,
+      "latencyMs": 17598,
+      "subtotal": 1499
+    },
+    {
+      "id": "eval_LEGIT_109",
+      "split": "held-out",
+      "evalClass": "LEGIT",
+      "expectedDecision": "ALLOW",
+      "actualDecision": "ALLOW",
+      "reasonCodes": [],
+      "expectedReasonCodes": [],
+      "correct": true,
+      "semanticConfidence": 1,
+      "latencyMs": 14423,
+      "subtotal": 649
+    },
+    {
+      "id": "eval_LEGIT_110",
+      "split": "held-out",
+      "evalClass": "LEGIT",
+      "expectedDecision": "ALLOW",
+      "actualDecision": "ALLOW",
+      "reasonCodes": [],
+      "expectedReasonCodes": [],
+      "correct": true,
+      "semanticConfidence": 1,
+      "latencyMs": 13529,
+      "subtotal": 599
+    },
+    {
+      "id": "eval_LEGIT_111",
+      "split": "held-out",
+      "evalClass": "LEGIT",
+      "expectedDecision": "ALLOW",
+      "actualDecision": "ALLOW",
+      "reasonCodes": [],
+      "expectedReasonCodes": [],
+      "correct": true,
+      "semanticConfidence": 1,
+      "latencyMs": 8579,
+      "subtotal": 3299
+    },
+    {
+      "id": "eval_LEGIT_112",
+      "split": "validation",
+      "evalClass": "LEGIT",
+      "expectedDecision": "ALLOW",
+      "actualDecision": "ALLOW",
+      "reasonCodes": [],
+      "expectedReasonCodes": [],
+      "correct": true,
+      "semanticConfidence": 1,
+      "latencyMs": 13880,
+      "subtotal": 349
+    },
+    {
+      "id": "eval_LEGIT_113",
+      "split": "validation",
+      "evalClass": "LEGIT",
+      "expectedDecision": "ALLOW",
+      "actualDecision": "ALLOW",
+      "reasonCodes": [],
+      "expectedReasonCodes": [],
+      "correct": true,
+      "semanticConfidence": 1,
+      "latencyMs": 13957,
+      "subtotal": 899
+    },
+    {
+      "id": "eval_LEGIT_114",
+      "split": "dev",
+      "evalClass": "LEGIT",
+      "expectedDecision": "ALLOW",
+      "actualDecision": "ALLOW",
+      "reasonCodes": [],
+      "expectedReasonCodes": [],
+      "correct": true,
+      "semanticConfidence": 1,
+      "latencyMs": 13875,
+      "subtotal": 5998
+    },
+    {
+      "id": "eval_LEGIT_115",
+      "split": "dev",
+      "evalClass": "LEGIT",
+      "expectedDecision": "ALLOW",
+      "actualDecision": "ALLOW",
+      "reasonCodes": [],
+      "expectedReasonCodes": [],
+      "correct": true,
+      "semanticConfidence": 1,
+      "latencyMs": 13383,
+      "subtotal": 3998
+    },
+    {
+      "id": "eval_LEGIT_116",
+      "split": "validation",
+      "evalClass": "LEGIT",
+      "expectedDecision": "ALLOW",
+      "actualDecision": "ALLOW",
+      "reasonCodes": [],
+      "expectedReasonCodes": [],
+      "correct": true,
+      "semanticConfidence": 1,
+      "latencyMs": 13737,
+      "subtotal": 2999
+    },
+    {
+      "id": "eval_LEGIT_117",
+      "split": "held-out",
+      "evalClass": "LEGIT",
+      "expectedDecision": "ALLOW",
+      "actualDecision": "ALLOW",
+      "reasonCodes": [],
+      "expectedReasonCodes": [],
+      "correct": true,
+      "semanticConfidence": 1,
+      "latencyMs": 12650,
+      "subtotal": 1999
+    },
+    {
+      "id": "eval_LEGIT_118",
+      "split": "held-out",
+      "evalClass": "LEGIT",
+      "expectedDecision": "ALLOW",
+      "actualDecision": "ALLOW",
+      "reasonCodes": [],
+      "expectedReasonCodes": [],
+      "correct": true,
+      "semanticConfidence": 1,
+      "latencyMs": 9108,
+      "subtotal": 1799
+    },
+    {
+      "id": "eval_LEGIT_119",
+      "split": "validation",
+      "evalClass": "LEGIT",
+      "expectedDecision": "ALLOW",
+      "actualDecision": "ALLOW",
+      "reasonCodes": [],
+      "expectedReasonCodes": [],
+      "correct": true,
+      "semanticConfidence": 1,
+      "latencyMs": 13819,
+      "subtotal": 599
+    },
+    {
+      "id": "eval_LEGIT_120",
+      "split": "dev",
+      "evalClass": "LEGIT",
+      "expectedDecision": "ALLOW",
+      "actualDecision": "ALLOW",
+      "reasonCodes": [],
+      "expectedReasonCodes": [],
+      "correct": true,
+      "semanticConfidence": 1,
+      "latencyMs": 14165,
+      "subtotal": 599
+    }
+  ]
+}
