@@ -41,7 +41,7 @@ Both agents MUST read this file plus `product.md` (what to build — frozen) and
 
 ## Current stage (update me!)
 
-Last update: 2026-09-05 ~02:30 IST by Fable.
+Last update: 2026-09-05 ~03:00 IST by Sonnet — task queue (tasks 1-4) done and committed, task 5 is a written proposal pending Fable/human OK.
 
 Phases P0–P15 all have code + tests. 56/56 Vitest, tsc clean, `next build` green, 13+ commits.
 
@@ -82,7 +82,15 @@ Work these in order. Rules: run `npx vitest run` + `npx tsc --noEmit` before and
 2. **`npm run` scripts**: add package.json scripts — `seed`, `smoke:order`, `smoke:e2e`, `eval:gen`, `eval:run`, `db:migrate` — mapping to existing scripts/. Update README + HANDOFF verification commands to use them.
 3. ~~**STEP_UP live check**~~ DONE (Sonnet, 2026-09-05): ambiguous intent → STEP_UP → approve → ALLOW. `int_xPYdW5_CoRiN` → `SEMANTIC_LOW_CONFIDENCE`, semantic_confidence 0.65 → `auth_ec5teAng2qwI` → approve → `order_TY6lxvhsKkcaME`. Cost: 1 intent-compile + 1 judge call, 1 test order.
 4. ~~**Demo page eval table**~~ DONE (Sonnet, 2026-09-05): `GET /demo` 200, `GET /api/eval/results` returns the final calibrated run, field names (`falseBlockGmvInr`, `stepUpRate`, `unauthorizedAllows`, split labels) match `app/demo/page.tsx` exactly, table renders all 4 splits. Fixed a stale command reference on the same page (`npx tsx scripts/run_eval.ts` → `npm run eval:run`, matches task 2's new scripts).
-5. **Deploy prep** (code only, no deploy): `prisma/schema.prisma` needs a Postgres-compatible datasource switch strategy for Neon (env-driven provider is NOT supported by Prisma — document chosen approach here as proposal, do not implement without Fable/human OK).
+5. **Deploy prep** — PROPOSAL ONLY, not implemented (Sonnet, 2026-09-05):
+
+   Checked `prisma/schema.prisma`: no sqlite-specific column types in use — both JSON-ish fields (`itemsJson`, `metadataJson`) are stored as `String`, not Prisma's `Json` type. So the *models* are already Postgres-portable; only the `datasource.provider` literal (currently `"sqlite"`, line 6) needs to differ per environment, and Prisma does not allow that literal to be env-driven.
+
+   **Proposed approach**: add a second schema file `prisma/schema.postgresql.prisma` — identical to `prisma/schema.prisma` except `provider = "postgresql"` — checked into the repo, kept in sync by hand (small model count, low drift risk) or via a `scripts/sync_prisma_schema.ts` diff-check in CI later if drift becomes a problem. Deploy uses `prisma generate --schema=prisma/schema.postgresql.prisma` and `prisma migrate deploy --schema=prisma/schema.postgresql.prisma` (the `db:migrate` script added in task 2 would need a `--schema` flag added, or a second `db:migrate:prod` script) against `DATABASE_URL` pointed at the Neon connection string in Vercel env vars. Local dev (`sqlite`, `file:./dev.db`) is untouched.
+
+   Alternative rejected: switching local dev to Postgres too (matching prod exactly) — adds a Docker/Neon-branch dependency to local setup that the current `npm install && cp .env.example .env && npx prisma migrate dev` flow doesn't need; not worth it for a hackathon timeline.
+
+   Needs Fable/human OK before creating `schema.postgresql.prisma` or touching `db:migrate`.
 
 Fable verification checklist for Sonnet's work: git diff review per commit; rerun vitest/tsc; grep money-path invariant (`grep -rn "createOrder" src/ app/ | grep -v razorpay/orders | grep -v test` → only decide.ts); confirm no secrets/dev.db committed.
 
