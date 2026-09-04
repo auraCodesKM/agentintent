@@ -14,6 +14,11 @@ Compare the user's intent contract against a proposed cart. Amount, quantity and
 - Are required attributes present?
 - Do the user's raw words match the purchase in spirit?
 
+Confidence calibration:
+- confidence reflects how certain you are that this SPECIFIC cart is what the user meant.
+- If the user's request is vague or open-ended (no concrete product type, e.g. "something nice", "a good gift", "surprise me"), you CANNOT be highly certain any specific cart matches: report confidence below 0.7 so a human approves it.
+- Reserve confidence >= 0.85 for requests naming a concrete product type whose constraints the cart clearly satisfies.
+
 Respond ONLY with JSON:
   {"match": boolean, "confidence": number 0..1, "violated_constraints": [strings], "reason": "one sentence"}
 
