@@ -51,7 +51,7 @@ Phases P0–P15 all have code + tests. 56/56 Vitest, tsc clean, `next build` gre
 - Amount BLOCK + semantic-intent flows with zero Razorpay objects
 - Webhook route live-tested: 400 bad sig / 200 valid / duplicate no-op
 
-**Eval status:** dev-split run proved policy layer 100% (incl. replay after race fix). Full 240-case run launched (background) on lite models with 13 RPM pacing — check `data/eval_results.json`; `/demo` renders it.
+**Eval status: FINAL — 240/240 (100%) on all splits** with calibrated judge (run 2026-09-04T21:23Z, gemini-3.5-flash-lite, 165 judge calls, 0 Razorpay calls). Held-out: accuracy 100%, policy 100%, semantic 100%, false blocks 0 (₹0), unauthorized allows 0, step-up 2.5% (H cases, correct), latency mean 9.6s / p95 14.4s (includes 13-RPM pacing waits — quote with that caveat). `data/eval_results.json` (gitignored, regenerable); pre-calibration run preserved in `data/eval_results_full_run1.json` (held-out 98.3%, H 1/5) — keep both for the honest before/after story.
 
 **NOT yet done (blocked on human or pending):**
 - [ ] Human confirms `order_TY5UjaGUfiajXO` in Dashboard → Test Mode → Orders
