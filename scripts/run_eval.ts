@@ -4,6 +4,8 @@
 //   npx tsx scripts/run_eval.ts                 # all splits, writes data/eval_results.json
 //   npx tsx scripts/run_eval.ts --split held-out
 process.loadEnvFile(".env")
+// Pace judge calls to stay under the key's per-minute quota (default 13 RPM; override in .env).
+process.env.GEMINI_RPM ||= "13"
 
 import { readFileSync, writeFileSync } from "node:fs"
 import { runEvaluation } from "../src/eval/run"

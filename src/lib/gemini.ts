@@ -45,6 +45,19 @@ function isTransient(err: unknown): boolean {
 
 const sleep = (ms: number): Promise<void> => new Promise((r) => setTimeout(r, ms))
 
+// Optional global request pacing for quota-limited keys: GEMINI_RPM caps requests/min
+// across all models (used by the eval runner; unset = no pacing).
+let nextSlotAt = 0
+async function pace(): Promise<void> {
+  const rpm = Number(process.env.GEMINI_RPM ?? "0")
+  if (!Number.isFinite(rpm) || rpm <= 0) return
+  const interval = Math.ceil(60_000 / rpm)
+  const now = Date.now()
+  const slot = Math.max(now, nextSlotAt)
+  nextSlotAt = slot + interval
+  if (slot > now) await sleep(slot - now)
+}
+
 // Models that rejected thinkingConfig (400 INVALID_ARGUMENT) — retried without it, then remembered.
 const noThinkingConfig = new Set<string>()
 
@@ -69,6 +82,7 @@ function isInvalidArgument(err: unknown): boolean {
 }
 
 async function generateRawOnce(model: string, systemInstruction: string, prompt: string): Promise<string> {
+  await pace()
   const ai = getClient()
   const res = await withTimeout(
     ai.models.generateContent({
