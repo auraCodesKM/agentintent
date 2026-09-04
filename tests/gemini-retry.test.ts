@@ -45,7 +45,7 @@ describe("generateJson fail-closed retry", () => {
 
   it("falls back to secondary model on primary API error", async () => {
     generateContentMock
-      .mockRejectedValueOnce(new Error("primary model unavailable"))
+      .mockRejectedValueOnce(new Error("primary model permanently gone (404 NOT_FOUND)"))
       .mockResolvedValueOnce({ text: '{"value": 1}' })
     await expect(generateJson(schema, "sys", "prompt")).resolves.toEqual({ value: 1 })
     const models = generateContentMock.mock.calls.map((c) => (c[0] as { model: string }).model)
