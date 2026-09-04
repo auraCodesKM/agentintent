@@ -331,7 +331,7 @@ export default function DemoPage() {
           </table>
         ) : (
           <p>
-            <b>NOT RUN</b> — run <code>npx tsx scripts/run_eval.ts</code>
+            <b>NOT RUN</b> — run <code>npm run eval:run</code>
           </p>
         )}
       </section>
