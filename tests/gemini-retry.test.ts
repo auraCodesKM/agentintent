@@ -11,6 +11,8 @@ vi.mock("@google/genai", () => ({
 
 process.env.GEMINI_API_KEY = "test-key-not-real"
 process.env.GOOGLE_GENAI_USE_VERTEXAI = "false"
+process.env.GEMINI_MODEL = "gemini-3.8-flash"
+process.env.GEMINI_FALLBACK_MODEL = "gemini-3.6-flash"
 
 const { generateJson, LlmInvalidOutputError } = await import("@/lib/gemini")
 
@@ -48,6 +50,6 @@ describe("generateJson fail-closed retry", () => {
     await expect(generateJson(schema, "sys", "prompt")).resolves.toEqual({ value: 1 })
     const models = generateContentMock.mock.calls.map((c) => (c[0] as { model: string }).model)
     expect(models[0]).toBe("gemini-3.8-flash")
-    expect(models[1]).toBe("gemini-2.5-flash")
+    expect(models[1]).toBe("gemini-3.6-flash")
   })
 })

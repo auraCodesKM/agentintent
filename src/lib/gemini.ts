@@ -1,9 +1,11 @@
 import { GoogleGenAI } from "@google/genai"
 import type { z } from "zod"
 
-// User-directed model choice (Sep 2026): stable flash tier, low thinking, no Pro.
-const PRIMARY_MODEL = "gemini-3.8-flash"
-const FALLBACK_MODEL = "gemini-2.5-flash"
+// Model selection is env-driven: switch by editing GEMINI_MODEL in .env, nothing else.
+// Defaults: stable flash tier, low thinking, no Pro (gemini-2.5-flash is 404 for new
+// API users, verified live; its error message directs to gemini-3.6-flash).
+const primaryModel = (): string => process.env.GEMINI_MODEL || "gemini-3.8-flash"
+const fallbackModel = (): string => process.env.GEMINI_FALLBACK_MODEL || "gemini-3.6-flash"
 const TIMEOUT_MS = 20_000
 
 let client: GoogleGenAI | null = null
@@ -36,7 +38,37 @@ function withTimeout<T>(p: Promise<T>, label: string): Promise<T> {
   ])
 }
 
+function isTransient(err: unknown): boolean {
+  const msg = err instanceof Error ? err.message : String(err)
+  return /"code":\s*(429|500|503)|UNAVAILABLE|RESOURCE_EXHAUSTED|high demand/i.test(msg)
+}
+
+const sleep = (ms: number): Promise<void> => new Promise((r) => setTimeout(r, ms))
+
+// Models that rejected thinkingConfig (400 INVALID_ARGUMENT) — retried without it, then remembered.
+const noThinkingConfig = new Set<string>()
+
 async function generateRaw(model: string, systemInstruction: string, prompt: string): Promise<string> {
+  try {
+    return await generateRawOnce(model, systemInstruction, prompt)
+  } catch (err) {
+    if (isInvalidArgument(err) && !noThinkingConfig.has(model)) {
+      // e.g. gemini-3.6-flash rejects thinkingBudget (verified live). Retry without it.
+      noThinkingConfig.add(model)
+      return generateRawOnce(model, systemInstruction, prompt)
+    }
+    if (!isTransient(err)) throw err
+    await sleep(2000) // one backoff retry on 429/5xx, then give up (fallback model handles the rest)
+    return generateRawOnce(model, systemInstruction, prompt)
+  }
+}
+
+function isInvalidArgument(err: unknown): boolean {
+  const msg = err instanceof Error ? err.message : String(err)
+  return /INVALID_ARGUMENT|"code":\s*400/.test(msg)
+}
+
+async function generateRawOnce(model: string, systemInstruction: string, prompt: string): Promise<string> {
   const ai = getClient()
   const res = await withTimeout(
     ai.models.generateContent({
@@ -47,7 +79,7 @@ async function generateRaw(model: string, systemInstruction: string, prompt: str
         responseMimeType: "application/json",
         temperature: 0,
         // Keep token/quota usage low: minimal thinking on flash tier.
-        thinkingConfig: { thinkingBudget: 0 },
+        ...(noThinkingConfig.has(model) ? {} : { thinkingConfig: { thinkingBudget: 0 } }),
       },
     }),
     `gemini ${model}`,
@@ -76,9 +108,9 @@ export async function generateJson<S extends z.ZodTypeAny>(
 ): Promise<z.infer<S>> {
   let text: string
   try {
-    text = await generateRaw(PRIMARY_MODEL, systemInstruction, prompt)
+    text = await generateRaw(primaryModel(), systemInstruction, prompt)
   } catch {
-    text = await generateRaw(FALLBACK_MODEL, systemInstruction, prompt)
+    text = await generateRaw(fallbackModel(), systemInstruction, prompt)
   }
 
   const first = tryParse(schema, text)
@@ -86,10 +118,10 @@ export async function generateJson<S extends z.ZodTypeAny>(
 
   // One retry with the parse error appended, then fail closed.
   const retryText = await generateRaw(
-    PRIMARY_MODEL,
+    primaryModel(),
     systemInstruction,
     `${prompt}\n\nYour previous response was invalid JSON for the required schema (${first.error}). Respond again with ONLY valid JSON.`,
-  ).catch(() => generateRaw(FALLBACK_MODEL, systemInstruction, prompt))
+  ).catch(() => generateRaw(fallbackModel(), systemInstruction, prompt))
 
   const second = tryParse(schema, retryText)
   if (second.ok) return second.value
