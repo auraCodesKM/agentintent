@@ -61,10 +61,9 @@ export async function judgeCart(
   try {
     return await generateJson(SemanticVerdictSchema, SYSTEM_INSTRUCTION, payload)
   } catch (err) {
-    if (err instanceof LlmInvalidOutputError) {
-      // Caller fails closed (STEP_UP), never ALLOW.
-      throw new SemanticJudgeError(err.message)
-    }
-    throw err
+    // ANY judge failure (schema, API outage, quota) fails closed at the caller
+    // (STEP_UP, never ALLOW). "No LLM error may cause a transaction to be created."
+    const detail = err instanceof LlmInvalidOutputError ? err.message : `judge call failed: ${err instanceof Error ? err.message : String(err)}`
+    throw new SemanticJudgeError(detail)
   }
 }
