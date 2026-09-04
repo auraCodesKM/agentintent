@@ -1,0 +1,12 @@
+node_modules/
+.next/
+.env
+.env.local
+*.db
+dev.db
+prisma/dev.db
+prisma/*.db-journal
+.vercel
+*.tsbuildinfo
+next-env.d.ts
+data/eval_results.json
