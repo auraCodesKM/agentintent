@@ -112,10 +112,12 @@ tests/          8 files, 56 tests — run `npx vitest run` before calling anythi
 ## Verification commands (all previously run green)
 
 ```bash
-npx tsc --noEmit && npx vitest run
-npx tsx scripts/e2e_smoke.ts          # costs ~10 Gemini calls + 1 real order
-npx tsx scripts/run_eval.ts           # ~160 judge calls, ZERO orders, ~13 min at 13 RPM
+npm run typecheck && npm test
+npm run smoke:e2e           # costs ~10 Gemini calls + 1 real order
+npm run eval:run            # ~160 judge calls, ZERO orders, ~13 min at 13 RPM
 ```
+
+`npm run` scripts (package.json): `seed`, `smoke:order`, `smoke:e2e`, `eval:gen`, `eval:run`, `db:migrate` (`prisma migrate deploy`) — all map to existing `scripts/*.ts`.
 
 ## Next work queue (in order)
 

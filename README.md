@@ -66,7 +66,7 @@ Next.js 15 (App Router) · TypeScript strict · Gemini Flash via `@google/genai`
 npm install
 cp .env.example .env       # fill values below
 npx prisma migrate dev
-npx tsx scripts/seed.ts
+npm run seed
 npm run dev                # http://localhost:3000/demo
 ```
 
@@ -86,12 +86,12 @@ Test payments: UPI `success@razorpay` / `failure@razorpay`.
 ## Verify each layer
 
 ```bash
-npx tsc --noEmit
-npx vitest run                        # 56 tests: policy, schemas, decide, idempotency, webhooks, reconcile
-npx tsx scripts/create_test_order.ts  # creates ONE real test-mode order_… (visible in Dashboard)
-npx tsx scripts/e2e_smoke.ts          # live buyer → judge → real order; two BLOCKs with zero orders
-npx tsx scripts/generate_eval.ts      # 240 deterministic cases (fixture ground truth, never Gemini)
-npx tsx scripts/run_eval.ts           # offline eval — creates ZERO Razorpay orders
+npm run typecheck
+npm test                    # 56 tests: policy, schemas, decide, idempotency, webhooks, reconcile
+npm run smoke:order         # creates ONE real test-mode order_… (visible in Dashboard)
+npm run smoke:e2e           # live buyer → judge → real order; two BLOCKs with zero orders
+npm run eval:gen            # 240 deterministic cases (fixture ground truth, never Gemini)
+npm run eval:run            # offline eval — creates ZERO Razorpay orders
 ```
 
 ## Evaluation design
@@ -99,6 +99,22 @@ npx tsx scripts/run_eval.ts           # offline eval — creates ZERO Razorpay o
 240 cases = 120 legitimate + 120 adversarial across classes: A amount, B quantity, C category, D semantic mismatch, E expired intent, F replay, G prompt injection, H ambiguity. Split 60 dev / 60 validation / 120 held-out; the held-out split is the reported result. Ground truth comes from deterministic templates — Gemini judges cases but never defines correctness. Metrics: overall/policy/semantic accuracy, false-block rate **and false-block GMV in ₹**, step-up rate, unauthorized-ALLOW count (must be 0), latency mean/p95.
 
 Measured results live in `data/eval_results.json` and render on `/demo`; until a run completes the UI says **NOT RUN**. No number in this README is a claim until that file backs it.
+
+### Measured results (held-out split, 120 cases)
+
+Run 2026-09-04T21:23Z · judge model `gemini-3.5-flash-lite` · 165 judge calls · 0 Razorpay calls.
+
+| Metric | Value |
+| --- | --- |
+| Accuracy (overall) | 100% (120/120) |
+| Policy accuracy | 100% (37/37) |
+| Semantic accuracy | 100% (83/83) |
+| False blocks | 0 (₹0 lost GMV) |
+| Unauthorized allows | 0 |
+| Step-up rate | 2.5% (3/120 — ambiguity class H, correctly escalated) |
+| Latency, mean / p95 | 9.6s / 14.4s (includes 13-RPM eval pacing waits, not raw judge latency) |
+
+Full breakdown (dev/validation/held-out, per-class) is in `data/eval_results.json`.
 
 ## Failure handling (demonstrated, not narrated)
 

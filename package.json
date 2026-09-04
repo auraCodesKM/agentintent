@@ -8,7 +8,12 @@
     "start": "next start",
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
-    "seed": "tsx scripts/seed.ts"
+    "seed": "tsx scripts/seed.ts",
+    "smoke:order": "tsx scripts/create_test_order.ts",
+    "smoke:e2e": "tsx scripts/e2e_smoke.ts",
+    "eval:gen": "tsx scripts/generate_eval.ts",
+    "eval:run": "tsx scripts/run_eval.ts",
+    "db:migrate": "prisma migrate deploy"
   },
   "dependencies": {
     "@google/genai": "^1.9.0",
