@@ -80,7 +80,23 @@ Phases P0–P15 all have code + tests. 56/56 Vitest, tsc clean, `next build` gre
 - 2026-09-05 Fable: KNOWN LIMITATION (pre-existing, accepted): Razorpay API failure after replay-key reservation leaves that intent+cart unretryable (key held, no order). Frequency ~0 in test mode; fix would need reservation rollback on RazorpayApiError — deferred, do not fix without proposal.
 - 2026-09-05 Fable: Neon deploy prep executed per approved variant — `scripts/gen_pg_schema.ts` derives `prisma/schema.postgresql.prisma` (gitignore the generated file? NO — commit it so Vercel builds without a gen step, but regenerate via `npm run db:gen-pg` after any schema change).
 
+- 2026-09-05 Builder CORRECTION: the real captured-payment order id recorded above (lines 57/76/98/100 as `order_TYFPRIpLLJeFpf`, double uppercase LL) is a transcription typo. The actual row in `prisma/dev.db` is **`order_TYFPRIpLlJeFpf`** (lowercase `l`) — verified directly against `razorpay_orders` and confirmed paired with `pay_TYFtu8vjA3C0iT` (captured, ₹7,499). Not re-editing the historical entries (append-only), but every reference after this point (B2 script, this evidence line) uses the verified correct id. If this id is ever typed by hand again (video script, docs), copy it from here or from the DB, not from the earlier lines.
 - 2026-09-05 Builder B1: closed approveStepUp single-use gap — added CONSUMED-intent check (after existingOrder lookup, before reserve/executeAllow) rejecting a second different-cart STEP_UP on an already-consumed intent with `AUTHORIZATION_NOT_APPROVABLE` + marks that auth row `REJECTED`. Also fixed a second, previously-undiscovered bug in the same function: the entry guard required `status === "STEP_UP"`, which made idempotent re-approval of the SAME authorization impossible (status flips to `APPROVED` before executeAllow, so any retry died at the entry guard instead of reaching the existingOrder return) — relaxed to accept `STEP_UP` or `APPROVED`. | tests: 1 new (`decide.test.ts` — two-different-carts-one-intent scenario: approve #1 ALLOW+order, approve #2 rejected+REJECTED status, createOrder called exactly once total, re-approve of #1 returns same order id), 59/59 all green | invariant grep: clean (createOrder only in decide.ts) | evidence: commit f4063a1.
+
+- 2026-09-05 Builder B2: `scripts/webhook_failure_demo.ts` (`npm run demo:webhook-fail`) — scripted webhook-death → API-poll recovery against the real captured payment. Ran twice against a running dev server with `WEBHOOK_FORCE_FAIL=true` (server restarted between runs); both runs green, second is idempotent (same 1 order row, same 1 payment row, no duplicate side effects). Zero Razorpay writes, zero Orders created by the script. Transcript (run 2, post-restart, secrets trimmed — none present):
+  ```
+  === Step 1: webhook death ===
+    server returned 500 (forced failure confirmed) -> {"error":"WEBHOOK_UNAVAILABLE"}
+  === Step 2: reconcile ===
+    200 -> {"status":"RECONCILED","razorpay_order_id":"order_TYFPRIpLlJeFpf","payments":[{"id":"pay_TYFtu8vjA3C0iT","status":"captured"}],"reason_code":"WEBHOOK_TIMEOUT_RECONCILED"}
+    ASSERT OK: payment pay_TYFtu8vjA3C0iT status=captured
+    ASSERT OK: exactly 1 RazorpayOrder row for order_TYFPRIpLlJeFpf
+  === Step 3: audit tail ===
+    ...PAYMENT_CAPTURED / WEBHOOK_TIMEOUT_RECONCILED (run 1) ... PAYMENT_CAPTURED / WEBHOOK_TIMEOUT_RECONCILED (run 2)
+    ASSERT OK: WEBHOOK_TIMEOUT_RECONCILED present in audit timeline
+  [orders] created during this script: 0 (must be 0)
+  ```
+  `.env` `WEBHOOK_FORCE_FAIL` restored to `false` after the run (not left armed). | tests: 59/59 unaffected | invariant grep: clean | evidence: commit 72db829. HUMAN follow-up per queue: watch one run live and confirm against Dashboard.
 
 ## BUILDER QUEUE v2 (written by Fable/principal — execute in the subscription window)
 
