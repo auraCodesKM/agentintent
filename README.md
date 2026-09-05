@@ -25,6 +25,11 @@ Razorpay AI Buildathon 2026 — **Track 1: AI Growth & Agentic Commerce**
 
 [Live demo](#-verify-it-yourself-in-five-minutes) · [Architecture](#-the-boundary) · [Security](#-security-properties) · [Evaluation](#-measured-results) · [Setup](#-setup) · [API](#-api-surface)
 
+### [▶ Watch the 5-minute pitch](https://www.canva.com/design/DAHUWuDXu9s/8pJTK7gbfEOiqFOqO93qYA/watch)
+
+Problem → real ALLOW with a Dashboard-visible order → real BLOCK with zero Razorpay objects created → webhook death and recovery → the evaluation numbers below, live.
+*(GitHub strips `<iframe>` from rendered READMEs — this is a direct link to the same video, not a downgrade.)*
+
 </div>
 
 ---
@@ -33,6 +38,7 @@ Razorpay AI Buildathon 2026 — **Track 1: AI Growth & Agentic Commerce**
 
 - [The problem, concretely](#the-problem-concretely)
 - [The boundary](#-the-boundary)
+- [Design decisions — and what we rejected](#-design-decisions--and-what-we-rejected)
 - [Verify it yourself in five minutes](#-verify-it-yourself-in-five-minutes)
 - [Security properties](#-security-properties)
 - [Measured results](#-measured-results)
@@ -108,6 +114,22 @@ Three things never cross that boundary: **Razorpay credentials** (the buyer and 
 | **L4** | always | combines the above into one authorization | `ALLOW` / `STEP_UP` / `BLOCK` |
 
 L3 runs last and never runs after a deterministic failure — **a policy violation never reaches the model**. The judge returns a verdict and a confidence; the gateway *consumes it as data*. It cannot raise a limit, overturn L2, or turn a `BLOCK` into an `ALLOW`. Confidence below `0.85` escalates to a human instead of resolving itself.
+
+---
+
+## 🧠 Design decisions — and what we rejected
+
+Every non-obvious choice below was a real fork, not a default. The rejected side is included because a design that never explains what it turned down is a design that hasn't been stress-tested.
+
+| Decision | We rejected | Because |
+| --- | --- | --- |
+| **Hand-written 8-turn buyer loop** | LangChain / CrewAI / a generic agent framework | Generic frameworks make `create_order` look like just another selectable tool. Money authority cannot live inside a runtime the model steers. Writing the loop ourselves (~120 lines) keeps the one dangerous edge — `request_checkout` — visible and auditable, not buried in a library's tool-dispatch internals. |
+| **REST for the gateway, not MCP** | Razorpay's MCP server, which already exposes payment tools to AI clients | MCP is capability *exposure* — exactly the opposite of what an authorization boundary needs. Giving the buyer an MCP `create_order` tool puts the governed action in the model's toolset. A future MCP adapter could sit *behind* an ALLOW; it must never sit in front of one. |
+| **Confidence threshold escalates to a human, not to a retry** | Re-prompting the judge until confidence clears 0.85 | Re-prompting to reach a threshold is p-hacking your own safety check — you're not more certain, you've just asked until the model said what you wanted. Low confidence is real information; it goes to `STEP_UP`, not to a second dice roll. |
+| **Atomic single-row claim, not a lock/mutex** | An in-memory mutex or a distributed lock (Redis, etc.) | A mutex only protects one process; this runs on serverless, where "one process" isn't guaranteed. One conditional `UPDATE … WHERE status = 'ACTIVE'` pushes the exclusion into the database's own write lock — correct under concurrency without adding infrastructure. |
+| **Judge sees canonical fields only, never `description`** | Passing the full catalog record for "richer context" | Free-text fields are where prompt injection lives. `HP-007`'s description is a live poisoned fixture proving the judge never sees it — richer context wasn't worth an unbounded attack surface for a field the decision doesn't need. |
+| **Deterministic eval ground truth, Gemini judges but never grades itself** | Using the judge's own verdicts as the accuracy baseline | An evaluation where the model defines correctness always converges to "the model is right." Ground truth comes from fixture templates that exist independent of any model call — the 100% held-out figure means something because of this, not despite it. |
+| **SQLite locally, Postgres only in deploy** | One database everywhere, for "consistency" | Local dev shouldn't need a hosted database to run `npm test`. The cost is one extra deploy step (`prisma db push` against Neon) — documented in `docs/DEPLOY.md` — in exchange for zero-setup contribution. |
 
 ---
 
@@ -360,10 +382,10 @@ Stated plainly rather than hidden.
 
 <div align="center">
 
-Built solo for the Razorpay AI Buildathon 2026 — architecture, backend, evaluation harness, and frontend, end to end.
+Built solo for the Razorpay AI Buildathon 2026 — intent compiler, buyer agent, policy engine, semantic judge, Razorpay integration, evaluation harness, and this frontend, end to end. No team, no boilerplate starter, no agent framework doing the hard part for me.
 
 **Kavin Thakur** · [GitHub @auraCodesKM](https://github.com/auraCodesKM) · kavinthakur@gmail.com
 
-If you read the code before the README: `src/gateway/decide.ts` is where to start.
+The pitch is above. The proof is in `src/gateway/decide.ts` — read that file before this README if you only have one minute.
 
 </div>
