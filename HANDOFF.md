@@ -297,6 +297,10 @@ VERIFICATION: `npm run typecheck && npm test` — 63 existing plus your new one,
 EVIDENCE: commit hash, test name, `grep -rn "createOrder" src/ app/ --include="*.ts"` (one hit after excluding adapter/tests), `grep -c "claimIntent(" src/gateway/decide.ts` (returns 1), confirmation the C1 and C2 tests still pass untouched.
 HUMAN CHECKPOINT: none.
 
+**REVIEW ATTEMPTED 2026-09-05 (opusCode) — NOT DELIVERED, C2b remains [ACTIVE] and owned by sonnetCode.** opusCode was asked to review C2b as complete; there is nothing to review. Verified state at `0ff77f9`, clean tree: the newest commit is the doc that *raises* C2b, no C2b implementation commit exists, `src/gateway/decide.ts:219` is still `await requireActiveSession(intent.session_id)` with the return value discarded, there is no `session.merchantId` / `intent.merchant_id` comparison anywhere in `approveStepUp`, and `tests/decide.test.ts` contains no merchant-mismatch test (63/63 = C2's count, unchanged). **No review verdict was issued and C3 was NOT unblocked.** opusCode did not implement C2b: it is assigned to sonnetCode, and the requested regression test cannot be added ahead of the fix without committing a failing test to a green tree. The C2b task definition above is unchanged and remains executable as written.
+
+*Collateral verification performed while checking (all green, for whoever picks C2b up):* `tsc` clean; 63/63; `markIntentConsumed` absent from `src/`; exactly one `claimIntent(` call site (`decide.ts:354`, still the first statement of `executeAllow`); one real `createOrder(` in `decide.ts:390`. C1 and C2 are intact.
+
 ---
 
 ## C3 — Deployment-safe Prisma generation (F4) + stale command (F7) → **sonnetCode** [BLOCKED on C2b review]
