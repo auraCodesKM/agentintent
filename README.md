@@ -137,3 +137,5 @@ Full breakdown (dev/validation/held-out, per-class) is in `data/eval_results.jso
 - Test Mode payments are sandbox transactions — no real money moves anywhere in this project.
 - No agent identity/cryptographic credentials, no UAP/AP2/ACP/x402 implementation, no fraud platform — out of scope by design; this is the authorization boundary, not an identity protocol.
 - Single merchant, INR, 26-SKU catalog.
+- `POST /api/checkout/approve` is deliberately unauthenticated in this single-merchant demo — anyone with an `authorization_id` can approve that specific STEP_UP. A production deployment would bind this endpoint to merchant auth/session, not leave it open.
+- Known replay-reservation edge case: if the Razorpay API call fails *after* a replay key is reserved (network blip, Razorpay outage), that exact intent+cart becomes unretryable — the key is held but no order exists. Observed frequency is ~0 in Test Mode; the fix would need reservation rollback on `RazorpayApiError`, deferred as a documented, accepted limitation rather than a silent gap (see `HANDOFF.md` decisions log, "KNOWN LIMITATION").
