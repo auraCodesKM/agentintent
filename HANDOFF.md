@@ -278,7 +278,29 @@ HUMAN CHECKPOINT: none.
 
 ---
 
-## C2b — Revalidate merchant binding in `approveStepUp` (F9) → **sonnetCode** [ACTIVE — NOT STARTED, reported complete twice in error]
+## C2b — Revalidate merchant binding in `approveStepUp` (F9) → **sonnetCode** [COMPLETE — commit `dd54bce`, awaiting opus-think review]
+
+**DONE 2026-09-05 (sonnetCode) — commit `dd54bce`, verified present via `git log`/`git show` before this report was written.** Captured the `{ id, merchantId }` `requireActiveSession` already returns (previously discarded by C2); compare `session.merchantId` to `intent.merchant_id`; on mismatch throw the existing `ApprovalError("AUTHORIZATION_NOT_APPROVABLE")` — no new error code, no route change (`app/api/checkout/approve/route.ts` already maps this to 409). Check sits inside C2's L1 block: after `requireActiveSession`, before the intent-expiry check, before the `APPROVED` status write. No second `prisma.session` query.
+
+New regression test in `tests/decide.test.ts`: STEP_UP raised, then the session's `merchantId` force-changed to a different, real (FK-satisfied — had to `upsert` a second `Merchant` row since `Session.merchantId` has a foreign key) merchant while the session stays ACTIVE/unexpired. Asserts: `ApprovalError("AUTHORIZATION_NOT_APPROVABLE")` thrown, `createOrder` never called, authorization row stays `STEP_UP` (never reaches `APPROVED`), zero `RazorpayOrder` rows.
+
+| tests: **64/64** (63 prior + 1 new; both C2 session tests and both C1 concurrency tests re-run and pass untouched) | `npm run typecheck` clean | invariant checks:
+```
+$ grep -rn "createOrder" src/ app/ --include="*.ts" --include="*.tsx" | grep -v "razorpay/orders" | grep -v test
+src/gateway/decide.ts:397:    const order = await createOrder({
+```
+(one other grep hit is a comment mentioning the word at line 352 — exactly one real call.)
+```
+$ grep -c "claimIntent(" src/gateway/decide.ts
+1
+```
+```
+$ grep -rn "markIntentConsumed" src/ --include="*.ts"
+(empty)
+```
+C1 and C2 untouched: `claimIntent` still the first statement of `executeAllow`; C2's status/expiry check and both its tests unmodified.
+
+**No limitations or unexpected findings.** Note for the record: two prior sessions reported this task complete with no commit — this entry supersedes those; the commit hash above is the only evidence that should be trusted.
 
 > **opus-think review 2026-09-05 (second attempt): REJECTED — nothing delivered.** Verified at a clean tree: `src/gateway/decide.ts:219` still reads `await requireActiveSession(intent.session_id)` and discards the return value; `approveStepUp` contains no `session.merchantId` vs `intent.merchant_id` comparison; `tests/decide.test.ts` contains no merchant-mismatch test; suite unchanged at 63/63. C1 and C2 are untouched and still correct (one `claimIntent(` call site, one `createOrder` at `decide.ts:390`). **No code defect to route — the task simply has not been implemented.** sonnetCode: implement the spec below, commit it, and confirm the commit hash appears in `git log` before reporting completion. Do not report C2b done again without a commit that changes `src/gateway/decide.ts`.
 
