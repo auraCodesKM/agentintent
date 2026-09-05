@@ -329,7 +329,16 @@ HUMAN CHECKPOINT: none.
 
 ---
 
-## C3 — Deployment-safe Prisma generation (F4) + stale command (F7) → **sonnetCode** [COMPLETE — commit `c52c610`, awaiting opus-think review]
+## C3 — Deployment-safe Prisma generation (F4) + stale command (F7) → **sonnetCode** [COMPLETE — ACCEPTED by opus-think 2026-09-05]
+
+> **opus-think review 2026-09-05: ACCEPTED — `c52c610`.** All six definition-of-done points met, verified against the repository rather than the report. (1) `build:vercel` = `prisma generate --schema=prisma/schema.postgresql.prisma && next build`; **I ran the generate step directly and it prints `Prisma schema loaded from prisma/schema.postgresql.prisma`** — the Postgres schema is genuinely read, not merely named in a script string. (2) `gen_pg_schema.ts` now prints `db push` plus an explicit never-`migrate deploy` warning (F7 closed). (3) `docs/DEPLOY.md` is accurate and copy-pasteable, and separates local SQLite, Neon/Postgres, Build Command, env vars, `db:push-pg` + `seed`, webhook registration with the three events, and the post-deploy smoke check. (4) A dedicated WARNING section — not a parenthetical — states `prisma/migrations/` is sqlite-dialect and `db:migrate` must never point at Neon. (5) Local SQLite is intact: 64/64, `tsc` clean, `db:gen-pg` rerun left `git status` clean (idempotent). (6) No deploy attempted, no resource created; the diff is `package.json`, `scripts/gen_pg_schema.ts`, `docs/DEPLOY.md` — **no `src/` file**, so C1/C2/C2b are untouched by construction, re-confirmed by grep anyway: one `createOrder` (`decide.ts:397`), one `claimIntent(` still first in `executeAllow`, `markIntentConsumed` absent.
+>
+> **F11 ruled ACCEPTABLE, not a defect — reproduced independently.** Both schemas generate to the same `./node_modules/@prisma/client`, so running `build:vercel` locally does overwrite the sqlite client; regenerating from `prisma/schema.prisma` restored it and the suite returned to 64/64. It is not a deployment defect — Vercel builds in an isolated environment where `build:vercel` is the last generate to run — and the only structural "fix" (a distinct `output` dir per schema) would push environment-dependent import paths into `src/`, which is far worse. Documenting it with the exact restore command is the right call.
+>
+> **Review raised F12 → C4 below.** C3's protection against F4 currently depends on a human remembering a dashboard override; forgetting it reproduces F4 exactly. Do C4 before agy's final QA.
+
+---
+
 
 **DONE 2026-09-05 (sonnetCode) — commit `c52c610`, verified present via `git log`/`git show` before this report.**
 
@@ -383,7 +392,29 @@ EVIDENCE: commit hash, the exact Build Command string documented in DEPLOY.md, `
 
 ---
 
-## After C1–C3 (incl. C2b): agy re-audit [QUEUED]
+## C4 — Pin the Vercel build command in `vercel.json` (F12) → **sonnetCode** [ACTIVE]
+
+FROM: opus-think
+TO: sonnetCode
+TASK: Make the Postgres-safe build command a property of the repository instead of a human's dashboard session.
+WHY: **F12, found during C3 review.** C3 is correct, but its entire protection against F4 currently rests on a human remembering to override Vercel's Build Command. Forget it once and Vercel runs the default `npm run build` — SQLite client, `postgres://` URL, green build, runtime failure: exactly the F4 bug C3 existed to remove. A checked-in `vercel.json` takes precedence over the dashboard default, so the repo configures itself. **This deliberately overrides the "no `vercel.json` needed" finding in `docs/DEPLOY.md`** — that finding was about *framework auto-detection* (correct on its own terms), not about pinning the build command, and it explicitly invited an override once a concrete need surfaced. It has.
+
+FILES: `vercel.json` (new, repo root), `docs/DEPLOY.md`.
+
+REQUIREMENTS:
+- Create `vercel.json` containing exactly one setting: `{ "buildCommand": "npm run build:vercel" }`. Nothing else — no framework key, no regions, no headers, no env block. Do not use it as an excuse to add other configuration.
+- Update the `## Finding: no vercel.json needed` section of `docs/DEPLOY.md`: keep the auto-detection reasoning (it is right), but record that a minimal `vercel.json` now exists **solely** to pin the build command, and say why (F12). Do not delete the original reasoning — amend it.
+- In the one-time setup steps, change the Build Command instruction from "must be set explicitly" to: it is pinned by `vercel.json`, and the dashboard needs no override — but state that if someone sets a conflicting dashboard value, `vercel.json` wins, so the file is the source of truth.
+- Everything else in `docs/DEPLOY.md` stays as-is; it was reviewed and accepted.
+
+CONSTRAINTS / INVARIANTS: config and docs only — **no `src/` changes, no `package.json` script changes**, `build:vercel` itself is already correct and must not be edited. Do not deploy, do not provision Neon or Vercel, do not create any remote resource.
+VERIFICATION: `npm run typecheck && npm test` (64/64) and `npx next build` still green — proving the new file is inert locally; `cat vercel.json` is valid JSON (`node -e "JSON.parse(require('fs').readFileSync('vercel.json','utf8'))"` exits 0); `git show --stat` lists exactly `vercel.json` and `docs/DEPLOY.md`.
+EVIDENCE: commit hash, the `vercel.json` contents verbatim, confirmation that no `src/` or `package.json` file appears in the diff.
+**HUMAN CHECKPOINT [HUMAN]**: unchanged and still required — Kavin provisions Neon, imports the repo into Vercel, sets the environment variables, runs `db:push-pg` + `seed` against Neon, registers the webhook, and confirms a live `/demo`. C4 only removes the Build-Command step from that list; it does not deploy anything.
+
+---
+
+## After C1–C4: agy final QA [QUEUED — starts once C4 commits]
 
 agy re-audits C1–C3 only (QA only — never implements). Focus: is the C1 claim genuinely atomic or merely re-ordered; does the C1 test prove a race or only a sequence; does C2 close the approval door without breaking idempotent re-approve; does C3 actually cause a Postgres client to be generated in a Vercel-like build. Report in the FINDING/SEVERITY/EVIDENCE/REPRODUCTION/AFFECTED INVARIANT/RECOMMENDED FIX/STATUS format; opus-think decides acceptance.
 
