@@ -1,0 +1,43 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1600" height="900" viewBox="0 0 1600 900">
+  <rect width="1600" height="900" fill="#090b0f"/>
+  <rect x="42" y="42" width="1516" height="816" rx="18" fill="#0d1016" stroke="#303642" stroke-width="2"/>
+  <g font-family="Arial, Helvetica, sans-serif" fill="#f5f7fa">
+    <text x="92" y="116" font-size="24" letter-spacing="4" fill="#8e98a8">AGENTINTENT / AUTHORIZATION GATEWAY</text>
+    <text x="92" y="205" font-size="72" font-weight="700">Only the gateway can pay.</text>
+    <text x="92" y="258" font-size="28" fill="#aeb7c5">AI buyer proposes → deterministic gateway decides → Razorpay executes</text>
+  </g>
+  <g font-family="Arial, Helvetica, sans-serif">
+    <rect x="92" y="348" width="300" height="170" rx="12" fill="#171b23" stroke="#3d4654"/>
+    <text x="120" y="395" font-size="18" letter-spacing="2" fill="#8e98a8">UNTRUSTED</text>
+    <text x="120" y="438" font-size="30" font-weight="700" fill="#f5f7fa">AI BUYER</text>
+    <text x="120" y="475" font-size="18" fill="#aeb7c5">search · inspect · propose</text>
+    <text x="120" y="502" font-size="16" fill="#687384">NO PAYMENT TOOL</text>
+
+    <path d="M410 433 H510" stroke="#677282" stroke-width="2"/>
+    <path d="M500 423 L516 433 L500 443" fill="none" stroke="#677282" stroke-width="2"/>
+
+    <rect x="540" y="312" width="520" height="242" rx="14" fill="#10151b" stroke="#0f7b4f" stroke-width="3"/>
+    <text x="575" y="358" font-size="18" letter-spacing="2" fill="#75c9a4">TRUST BOUNDARY</text>
+    <text x="575" y="405" font-size="30" font-weight="700" fill="#f5f7fa">L1  SESSION / REPLAY</text>
+    <text x="575" y="445" font-size="30" font-weight="700" fill="#f5f7fa">L2  DETERMINISTIC POLICY</text>
+    <text x="575" y="485" font-size="30" font-weight="700" fill="#f5f7fa">L3  SEMANTIC JUDGE</text>
+    <text x="575" y="525" font-size="18" fill="#75c9a4">L4  ALLOW · STEP_UP · BLOCK</text>
+
+    <path d="M1080 433 H1180" stroke="#677282" stroke-width="2"/>
+    <path d="M1170 423 L1186 433 L1170 443" fill="none" stroke="#677282" stroke-width="2"/>
+
+    <rect x="1210" y="348" width="270" height="170" rx="12" fill="#11182b" stroke="#3154e5"/>
+    <text x="1238" y="395" font-size="18" letter-spacing="2" fill="#91a4ff">EXECUTION</text>
+    <text x="1238" y="438" font-size="30" font-weight="700" fill="#f5f7fa">RAZORPAY</text>
+    <text x="1238" y="475" font-size="18" fill="#aeb7c5">Test Mode · Order API</text>
+    <text x="1238" y="502" font-size="16" fill="#91a4ff">ALLOW ONLY</text>
+  </g>
+  <g font-family="monospace" font-size="16" fill="#697587">
+    <text x="92" y="660">MODEL AUTHORITY: NONE</text>
+    <text x="92" y="692">SERVER-PRICED CART: YES</text>
+    <text x="92" y="724">RAZORPAY CREDENTIALS: GATEWAY ONLY</text>
+    <text x="92" y="756">TEST MODE: NO REAL MONEY</text>
+  </g>
+  <line x1="92" y1="805" x2="1508" y2="805" stroke="#303642"/>
+  <text x="92" y="838" font-family="monospace" font-size="15" fill="#697587">RAZORPAY AI BUILDATHON 2026 · TRACK 1</text>
+</svg>
