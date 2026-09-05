@@ -4,12 +4,29 @@ Config-only reference. Nothing here has been executed against real Vercel/Neon
 infrastructure — this repo has never been deployed. Written so deploy day
 needs zero code edits.
 
-## Finding: no `vercel.json` needed
+## Finding: no `vercel.json` needed for framework detection — one now exists to pin the build command (F12)
 
 `npx next build` (checked 2026-09-05) is a standard Next.js App Router build —
 static `/` and `/demo`, dynamic `/api/*` route handlers, one dynamic page
-(`/checkout/[orderId]`). Vercel auto-detects this with zero configuration.
-Do not add a `vercel.json` unless a real deploy surfaces a concrete need.
+(`/checkout/[orderId]`). Vercel auto-detects this with zero configuration, and
+that finding still stands: `vercel.json` is not needed for framework detection.
+
+A concrete need has since surfaced (F12, found during C3 review): C3's fix for
+F4 (generate the Prisma client from the Postgres schema before building) only
+works if Vercel's Build Command is actually set to `npm run build:vercel`. As
+pure dashboard configuration, that protection depends on a human remembering
+to set it — forgetting it once silently falls back to the default `npm run
+build`, reproducing F4 exactly (SQLite client, `postgres://` URL, green build,
+runtime failure). A checked-in `vercel.json` with `buildCommand` takes
+precedence over the dashboard default, so the repository configures itself
+instead of relying on a human's memory. The file contains exactly one setting
+— no framework key, no regions, no headers, no env block — deliberately
+minimal, solely to pin the build command:
+```json
+{
+  "buildCommand": "npm run build:vercel"
+}
+```
 
 ## WARNING: never run the SQLite migrations against Neon
 
@@ -27,15 +44,18 @@ for this database, not a missing step.
 1. **Neon**: create a project, copy the **pooled** connection string
    (`postgres://...`, the one with `-pooler` in the host — Vercel's
    serverless functions need pooled connections, not the direct one).
-2. **Vercel**: import this GitHub repo. Framework preset: Next.js (auto).
-   **Build Command must be set explicitly to `npm run build:vercel`** — override
-   the Vercel dashboard default (`next build` / `npm run build`). This runs
-   `prisma generate --schema=prisma/schema.postgresql.prisma` before `next
-   build`, so the deployed Prisma client is generated against the **Postgres**
-   schema. Without this override, Vercel falls back to Prisma's own
-   `postinstall`, which reads the default `prisma/schema.prisma` (provider
-   `sqlite`) — the deployed app would then run a SQLite client against a
-   `postgres://` `DATABASE_URL` and fail at runtime, after a green build. The
+2. **Vercel**: import this GitHub repo. Framework preset: Next.js (auto). The
+   **Build Command is pinned by the checked-in `vercel.json`** to
+   `npm run build:vercel` — the dashboard needs no manual override; importing
+   the repo is enough. This runs `prisma generate
+   --schema=prisma/schema.postgresql.prisma` before `next build`, so the
+   deployed Prisma client is generated against the **Postgres** schema. If
+   someone sets a conflicting value in the dashboard's Build Command field
+   anyway, `vercel.json` wins — the file, not the dashboard, is the source of
+   truth. (Without this pin, Vercel would fall back to Prisma's own
+   `postinstall`, which reads the default `prisma/schema.prisma`, provider
+   `sqlite` — the deployed app would then run a SQLite client against a
+   `postgres://` `DATABASE_URL` and fail at runtime, after a green build.) The
    plain `npm run build` script is untouched and still `next build` alone, for
    local SQLite development.
 3. **Environment variables** (Vercel project settings → Environment Variables,
