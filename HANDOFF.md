@@ -329,7 +329,32 @@ HUMAN CHECKPOINT: none.
 
 ---
 
-## C3 — Deployment-safe Prisma generation (F4) + stale command (F7) → **sonnetCode** [ACTIVE — unblocked 2026-09-05; last agent-executable task]
+## C3 — Deployment-safe Prisma generation (F4) + stale command (F7) → **sonnetCode** [COMPLETE — commit `c52c610`, awaiting opus-think review]
+
+**DONE 2026-09-05 (sonnetCode) — commit `c52c610`, verified present via `git log`/`git show` before this report.**
+
+1. `package.json`: added `"build:vercel": "prisma generate --schema=prisma/schema.postgresql.prisma && next build"`. Plain `build` script untouched (`next build` alone).
+2. `docs/DEPLOY.md` step 2 now states the Build Command **must be set explicitly** to `npm run build:vercel`, with the failure mode spelled out (Vercel's Prisma postinstall would otherwise read the sqlite schema and the deployed app would run a SQLite client against Postgres, failing at runtime after a green build).
+3. `docs/DEPLOY.md` gained a dedicated `## WARNING: never run the SQLite migrations against Neon` section (not just a parenthetical) stating `prisma/migrations/` is SQLite-dialect and `db:migrate` is sqlite-dev-only.
+4. `scripts/gen_pg_schema.ts`'s printed usage line fixed from `prisma migrate deploy` to `prisma db push` (F7), plus an explicit one-line warning against `migrate deploy` on Neon.
+5. Re-read `docs/DEPLOY.md` end to end — no other contradictions found.
+
+**Finding surfaced during verification (documented, not a defect in this change):** `prisma generate` always writes to the same shared `./node_modules/@prisma/client`, so running `npm run build:vercel` **locally** overwrites the client the local sqlite dev/tests use. Reproduced directly: ran `npm run build:vercel` locally, then `npm test` failed 18/64 with Postgres-shaped Prisma errors against sqlite `dev.db`; restored to 64/64 with `npx prisma generate --schema=prisma/schema.prisma`. Harmless on real Vercel (an isolated, ephemeral build environment never shared with a dev machine) — documented as a caveat in `docs/DEPLOY.md` so a future local verifier doesn't mistake the failure for a regression in this change.
+
+| tests: **64/64** unaffected (no test touches `package.json`/`docs/`/`scripts/gen_pg_schema.ts` logic) | `npm run typecheck` clean | `npx next build` (plain) green | `npm run build:vercel` succeeds — `prisma generate` output reads **`Prisma schema loaded from prisma/schema.postgresql.prisma`**, confirming the Postgres schema was actually used, not just referenced in a script string | `npm run db:gen-pg` rerun: idempotent, clean `git diff` on `prisma/` | invariant checks (re-verified untouched by this config/docs-only change):
+```
+$ grep -rn "createOrder" src/ app/ --include="*.ts" --include="*.tsx" | grep -v "razorpay/orders" | grep -v test
+src/gateway/decide.ts:397:    const order = await createOrder({
+```
+(one other grep hit is a comment at line 352 — exactly one real call.)
+```
+$ grep -c "claimIntent(" src/gateway/decide.ts
+1
+```
+
+**No deploy attempted, no Neon/Vercel resource created.** Config and docs only — no source-logic changes; `prisma/schema.postgresql.prisma` stays generated, never hand-edited; local SQLite dev flow confirmed working (post prisma-client restore) via full test suite.
+
+C3 definition-of-done checklist, all satisfied: (1) `build:vercel` exists and proven to generate from the Postgres schema; (2) `docs/DEPLOY.md` has the exact Build Command, full env-var list, one-time `db:push-pg`+`seed`, webhook URL/events, post-deploy smoke check — all pre-existing from B3, confirmed still present and accurate; (3) explicit SQLite-migrations warning added; (4) F7 fixed; (5) local SQLite dev confirmed untouched; (6) no deploy, no resources created — provisioning/Build-Command-setting/webhook-registration/live-`/demo`-check remain [HUMAN].
 
 FROM: opus-think
 TO: sonnetCode
