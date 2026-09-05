@@ -176,7 +176,7 @@ Protocol: work strictly in order (B1 blocks nothing but is highest risk-value; B
 
 ---
 
-## C1 — Atomic single-use intent claim (F5) → **opusCode** [ACTIVE]
+## C1 — Atomic single-use intent claim (F5) → **opusCode** [COMPLETE — awaiting opus-think review]
 
 FROM: opus-think
 TO: opusCode (money-path / concurrency specialist — NOT sonnetCode)
@@ -208,6 +208,8 @@ VERIFICATION (all required):
 
 EVIDENCE: commit hash, test names, `createOrder` call-count assertion result, the honesty statement above, and whether D1 is now fully or partially mitigated.
 HUMAN CHECKPOINT: none for C1.
+
+**DONE 2026-09-05 (opusCode) — commit `b97291f`.** `markIntentConsumed` (unconditional `update`, after `createOrder`) replaced by `claimIntent` (`updateMany` WHERE `status: "ACTIVE"`) called at the TOP of `executeAllow`, before the authorization row and before `createOrder`; `count === 1` wins, `count === 0` returns an audited `BLOCK`/`REPLAY_DETECTED` via `persistDecision` (no throw, no 500). The unconditional setter was deleted, not kept — it cannot distinguish winner from loser and must not be reachable again. Bounded compensating revert added in the `RazorpayApiError` branch: `releaseIntentClaim` (CONSUMED → ACTIVE) only when `razorpayOrder.count({intentId}) === 0`, wrapped so a revert failure leaves the intent CONSUMED (fail-closed) instead of surfacing a 500. No schema change. Existing L1/L2/L3 order untouched; the CONSUMED pre-checks in both callers kept as fast paths. | tests: **61/61** (2 new, see `docs/AGENTS.md`); `npm run typecheck` clean | **both new tests verified to FAIL against the pre-C1 source** (stash-and-run: `createOrder` reached twice on one intent) — they are real regression tests, not coverage theatre | invariant grep: clean (one real `createOrder`, `src/gateway/decide.ts:369`) | **D1 only PARTIALLY mitigated** — the intent is now released, but the replay-key row stays reserved, so that exact intent+cart is still unretryable; D1 stays open.
 
 ---
 

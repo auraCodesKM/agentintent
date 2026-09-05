@@ -5,7 +5,7 @@ import { nanoid } from "nanoid"
 import { Prisma } from "@prisma/client"
 import { prisma } from "@/lib/db"
 import { audit } from "@/audit/logger"
-import { getCart, getIntent, getIntentStatus, markIntentConsumed } from "@/gateway/session"
+import { claimIntent, getCart, getIntent, getIntentStatus, releaseIntentClaim } from "@/gateway/session"
 import { makeReplayKey, replayKeyExists, reserveReplayKey } from "@/gateway/replay"
 import { checkPolicy, isIntentExpired, type MerchantPolicy } from "@/policy/engine"
 import { priceCart } from "@/catalog/catalog"
@@ -315,6 +315,32 @@ interface AllowInput {
 }
 
 async function executeAllow(input: AllowInput): Promise<CheckoutDecision> {
+  // ---- Single-use claim: the last gate before money moves. ----
+  // ONE conditional UPDATE (ACTIVE -> CONSUMED, status in the WHERE clause) is
+  // the only thing separating two concurrent DIFFERENT-cart requests on one
+  // intent from two real Orders: different carts hash to different replay
+  // keys, so the replay reservation never puts them in conflict, and the
+  // CONSUMED pre-checks in requestCheckout/approveStepUp are reads whose
+  // window spans the Razorpay round trip. Claiming here, before createOrder,
+  // is what makes single-use provable rather than merely likely.
+  //
+  // executeAllow is the single funnel for both callers, so this is the one
+  // place it belongs. Same-intent + same-cart idempotent retries return at the
+  // existingOrder lookup in both callers and never reach this line.
+  //
+  // Loser fails closed: an audited BLOCK/REPLAY_DETECTED, never an ALLOW and
+  // never a throw that would escape the API route as a 500.
+  if (!(await claimIntent(input.intentId))) {
+    return await persistDecision(
+      input.intentId,
+      input.cartId,
+      "BLOCK",
+      ["REPLAY_DETECTED"],
+      input.semanticConfidence,
+      input.sessionId,
+    )
+  }
+
   const authorizationId =
     input.authorizationId ??
     (
@@ -364,9 +390,7 @@ async function executeAllow(input: AllowInput): Promise<CheckoutDecision> {
       sessionId: input.sessionId,
       metadata: { razorpay_order_id: order.razorpayOrderId, amount_paise: order.amountPaise },
     })
-    // Single-use intent: the authorization has now produced a real Order.
-    // Covers both requestCheckout and approveStepUp (both end here).
-    await markIntentConsumed(input.intentId)
+    // The intent was already claimed above; nothing to mark here.
     return {
       decision: "ALLOW",
       reason_codes: [],
@@ -376,6 +400,20 @@ async function executeAllow(input: AllowInput): Promise<CheckoutDecision> {
     }
   } catch (err) {
     if (err instanceof RazorpayApiError) {
+      // Compensating revert: the claim was taken BEFORE the Razorpay call, so
+      // a failed call must not strand the intent as CONSUMED forever. Bounded
+      // twice over — only CONSUMED -> ACTIVE, and only when this intent has no
+      // RazorpayOrder row, so a real Order can never have its intent
+      // un-consumed. Best-effort on purpose: if the revert itself fails the
+      // intent simply stays CONSUMED, which is the fail-closed outcome, and
+      // the caller still gets its degraded response instead of a 500.
+      try {
+        if ((await prisma.razorpayOrder.count({ where: { intentId: input.intentId } })) === 0) {
+          await releaseIntentClaim(input.intentId)
+        }
+      } catch {
+        // Intentionally swallowed: staying CONSUMED is safe.
+      }
       await audit({
         eventType: "RAZORPAY_API_ERROR",
         actor: "razorpay",

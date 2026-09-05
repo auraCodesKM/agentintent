@@ -179,4 +179,89 @@ describe("decide.ts authorization boundary", () => {
     const orderRows = await prisma.razorpayOrder.count({ where: { intentId } })
     expect(orderRows).toBe(1)
   })
+
+  // ---- C1 (finding F5): CONCURRENT single-use enforcement ----
+  //
+  // HONESTY NOTE — read before trusting these two tests. They fire the calls
+  // with Promise.all instead of awaiting them in sequence, so the two flows
+  // genuinely interleave at every await point and each one's CONSUMED
+  // pre-check can be overtaken by the other. That is what makes them a
+  // regression test for F5: both fail against the pre-C1 code, where the
+  // intent was consumed only AFTER createOrder returned.
+  //
+  // They are NOT a true OS-level race reproduction. Node runs one thread,
+  // Prisma multiplexes these queries, and SQLite serializes writers with a
+  // file lock, so the interleaving is deterministic rather than adversarial.
+  // What they prove is that the guard's LOGIC is correct when the two flows
+  // interleave — not that the database's locking is correct under real
+  // parallelism. The atomicity argument itself rests on the claim being a
+  // single conditional UPDATE (status in the WHERE clause), which SQLite and
+  // Postgres both serialize; that part is verified by code inspection, not by
+  // this test.
+  it("C1: two CONCURRENT approveStepUp calls on different carts of one intent create exactly one order", async () => {
+    judgeCartMock.mockResolvedValue({ match: true, confidence: 0.6, violated_constraints: [], reason: "unsure" })
+    const { intentId } = await makeIntent({ max_amount: 20000, max_quantity: 5, allowed_categories: ["headphones"] })
+
+    const cartA = await proposeCart(intentId, [{ sku: "HP-004", quantity: 1 }]) // ₹7,499
+    const cartB = await proposeCart(intentId, [{ sku: "HP-005", quantity: 1 }]) // ₹13,999
+    const stepUpA = await requestCheckout(intentId, cartA.cartId)
+    const stepUpB = await requestCheckout(intentId, cartB.cartId)
+    expect(stepUpA.decision).toBe("STEP_UP")
+    expect(stepUpB.decision).toBe("STEP_UP")
+
+    // Fired together, NOT awaited one after the other.
+    const settled = await Promise.allSettled([
+      approveStepUp(stepUpA.authorization_id!),
+      approveStepUp(stepUpB.authorization_id!),
+    ])
+
+    // Exactly one winner with a real order id.
+    const allowed = settled.filter(
+      (r) => r.status === "fulfilled" && r.value.decision === "ALLOW" && r.value.razorpay_order_id !== null,
+    )
+    expect(allowed).toHaveLength(1)
+
+    // The loser must fail closed. Which shape depends on where it lost: it
+    // either read CONSUMED at the pre-check (ApprovalError) or lost the atomic
+    // claim inside executeAllow (audited BLOCK/REPLAY_DETECTED). Both are
+    // acceptable; an ALLOW or an unhandled throw is not.
+    const loser = settled.find((r) => !(r.status === "fulfilled" && r.value.decision === "ALLOW"))!
+    if (loser.status === "fulfilled") {
+      expect(loser.value.decision).toBe("BLOCK")
+      expect(loser.value.reason_codes).toContain("REPLAY_DETECTED")
+      expect(loser.value.razorpay_order_id).toBeNull()
+    } else {
+      expect(loser.reason).toBeInstanceOf(ApprovalError)
+    }
+
+    // The money-path assertions: one Razorpay call, one order row.
+    expect(createOrderMock).toHaveBeenCalledTimes(1)
+    expect(await prisma.razorpayOrder.count({ where: { intentId } })).toBe(1)
+  })
+
+  it("C1: two CONCURRENT requestCheckout calls on different carts of one intent create exactly one order", async () => {
+    const { intentId } = await makeIntent({ max_amount: 20000, max_quantity: 5, allowed_categories: ["headphones"] })
+
+    const cartA = await proposeCart(intentId, [{ sku: "HP-004", quantity: 1 }]) // ₹7,499
+    const cartB = await proposeCart(intentId, [{ sku: "HP-005", quantity: 1 }]) // ₹13,999
+
+    // Different carts hash to different replay keys, so the replay reservation
+    // does NOT separate these two — only the atomic intent claim does.
+    const [resA, resB] = await Promise.all([
+      requestCheckout(intentId, cartA.cartId),
+      requestCheckout(intentId, cartB.cartId),
+    ])
+
+    const decisions = [resA.decision, resB.decision].sort()
+    expect(decisions).toEqual(["ALLOW", "BLOCK"])
+
+    const winner = resA.decision === "ALLOW" ? resA : resB
+    const loser = resA.decision === "ALLOW" ? resB : resA
+    expect(winner.razorpay_order_id).not.toBeNull()
+    expect(loser.reason_codes).toContain("REPLAY_DETECTED")
+    expect(loser.razorpay_order_id).toBeNull()
+
+    expect(createOrderMock).toHaveBeenCalledTimes(1)
+    expect(await prisma.razorpayOrder.count({ where: { intentId } })).toBe(1)
+  })
 })

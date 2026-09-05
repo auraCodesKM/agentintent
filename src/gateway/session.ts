@@ -93,8 +93,37 @@ export async function getIntentStatus(intentId: string): Promise<string | null> 
   return row?.status ?? null
 }
 
-export async function markIntentConsumed(intentId: string): Promise<void> {
-  await prisma.intentContract.update({ where: { id: intentId }, data: { status: "CONSUMED" } })
+/**
+ * Atomically claim a single-use intent: ACTIVE -> CONSUMED in ONE conditional
+ * UPDATE, returning true only for the caller that won the claim.
+ *
+ * The status lives in the WHERE clause on purpose. A read (`getIntentStatus`)
+ * followed by a write is NOT equivalent: concurrent callers can both observe
+ * ACTIVE and both proceed. Here the database serializes the claim (SQLite
+ * write lock / Postgres row lock), so exactly one caller sees count === 1.
+ *
+ * There is deliberately no unconditional "mark consumed" helper — an
+ * unconditional update cannot tell a winner from a loser.
+ */
+export async function claimIntent(intentId: string): Promise<boolean> {
+  const { count } = await prisma.intentContract.updateMany({
+    where: { id: intentId, status: "ACTIVE" },
+    data: { status: "CONSUMED" },
+  })
+  return count === 1
+}
+
+/**
+ * Compensating revert of a claim whose order creation failed. Conditional on
+ * CONSUMED so it can never resurrect an intent some other caller has since
+ * claimed legitimately. Callers must additionally confirm that no
+ * RazorpayOrder row exists for the intent before calling this.
+ */
+export async function releaseIntentClaim(intentId: string): Promise<void> {
+  await prisma.intentContract.updateMany({
+    where: { id: intentId, status: "CONSUMED" },
+    data: { status: "ACTIVE" },
+  })
 }
 
 export class CartError extends Error {
