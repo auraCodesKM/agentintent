@@ -114,6 +114,9 @@ C3 correctly adds `build:vercel` and documented that Vercel's Build Command must
 
 ## Verification Evidence
 
+- **C4 — VERIFIED BY CODE INSPECTION (opus-think, 2026-09-05).** `vercel.json` parses and contains exactly one key, `buildCommand: "npm run build:vercel"` — no framework key, regions, headers or env block. Diff is `vercel.json` + `docs/DEPLOY.md` only; no `src/`, no `package.json`. 64/64, `tsc` clean, tree clean, no `.vercel` directory (nothing was provisioned). `prisma` is a devDependency, so the CLI resolves during Vercel's install step and `build:vercel` can actually run there.
+- **The deploy path as a whole is NOT VERIFIED.** `vercel.json` taking precedence over the dashboard, the Neon push, and the deployed app serving `/demo` have never been executed — this repo has never been deployed. Everything about deployment is design-verified only, and only the human's first real deploy converts it to VERIFIED MANUALLY. Do not describe the deploy as working.
+
 Independently re-run by opus-think after B5 (2026-09-05), not taken on the builder's word:
 
 - **Tests: 59/59 pass**, 10 files. `tsc --noEmit` clean. `next build` green.

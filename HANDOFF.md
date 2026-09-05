@@ -392,47 +392,36 @@ EVIDENCE: commit hash, the exact Build Command string documented in DEPLOY.md, `
 
 ---
 
-## C4 — Pin the Vercel build command in `vercel.json` (F12) → **sonnetCode** [COMPLETE — commit `f6c2c50`, awaiting opus-think review]
+## C4 — Pin the Vercel build command in `vercel.json` (F12) → **sonnetCode** [COMPLETE — ACCEPTED by opus-think 2026-09-05]
 
-**DONE 2026-09-05 (sonnetCode) — commit `f6c2c50`, verified present via `git log`/`git show` before this report.**
-
-1. Created `vercel.json` (repo root) containing exactly one setting:
-   ```json
-   {
-     "buildCommand": "npm run build:vercel"
-   }
-   ```
-   No framework key, no regions, no headers, no env block.
-2. `docs/DEPLOY.md`: amended (not deleted) the `## Finding: no vercel.json needed` section — the auto-detection reasoning stands (framework detection still needs nothing), with a new paragraph recording that a minimal `vercel.json` now exists solely to pin the build command, and why (F12).
-3. `docs/DEPLOY.md` step 2 of one-time setup: changed from "must be set explicitly" to stating the Build Command is now pinned by the checked-in file, so the dashboard needs no manual override — and if someone sets a conflicting dashboard value anyway, `vercel.json` wins (file is the source of truth). Everything else in `docs/DEPLOY.md` left as-is.
-
-| verification: `vercel.json` valid JSON (`node -e "JSON.parse(require('fs').readFileSync('vercel.json','utf8'))"` exits 0) | `npm run typecheck && npm test`: **64/64** green, tsc clean | `npx next build` (plain): green — `vercel.json`'s `buildCommand` is a Vercel-dashboard-level directive, confirmed inert to a local build | `git status` before staging showed exactly `vercel.json` (new, untracked) and `docs/DEPLOY.md` (modified) — no `src/`, no `package.json`, no other file | `git show --stat f6c2c50` confirms the same two files, nothing else.
-
-**No deploy attempted, no Neon/Vercel resource created.** `build:vercel` itself was not edited (constraint honored). No application-logic, authorization, Razorpay, Prisma-schema, or eval changes — config/docs only.
-
-Not invoking agy per explicit instruction. Stopping after this commit to await opus-think's review.
-
-FROM: opus-think
-TO: sonnetCode
-TASK: Make the Postgres-safe build command a property of the repository instead of a human's dashboard session.
-WHY: **F12, found during C3 review.** C3 is correct, but its entire protection against F4 currently rests on a human remembering to override Vercel's Build Command. Forget it once and Vercel runs the default `npm run build` — SQLite client, `postgres://` URL, green build, runtime failure: exactly the F4 bug C3 existed to remove. A checked-in `vercel.json` takes precedence over the dashboard default, so the repo configures itself. **This deliberately overrides the "no `vercel.json` needed" finding in `docs/DEPLOY.md`** — that finding was about *framework auto-detection* (correct on its own terms), not about pinning the build command, and it explicitly invited an override once a concrete need surfaced. It has.
-
-FILES: `vercel.json` (new, repo root), `docs/DEPLOY.md`.
-
-REQUIREMENTS:
-- Create `vercel.json` containing exactly one setting: `{ "buildCommand": "npm run build:vercel" }`. Nothing else — no framework key, no regions, no headers, no env block. Do not use it as an excuse to add other configuration.
-- Update the `## Finding: no vercel.json needed` section of `docs/DEPLOY.md`: keep the auto-detection reasoning (it is right), but record that a minimal `vercel.json` now exists **solely** to pin the build command, and say why (F12). Do not delete the original reasoning — amend it.
-- In the one-time setup steps, change the Build Command instruction from "must be set explicitly" to: it is pinned by `vercel.json`, and the dashboard needs no override — but state that if someone sets a conflicting dashboard value, `vercel.json` wins, so the file is the source of truth.
-- Everything else in `docs/DEPLOY.md` stays as-is; it was reviewed and accepted.
-
-CONSTRAINTS / INVARIANTS: config and docs only — **no `src/` changes, no `package.json` script changes**, `build:vercel` itself is already correct and must not be edited. Do not deploy, do not provision Neon or Vercel, do not create any remote resource.
-VERIFICATION: `npm run typecheck && npm test` (64/64) and `npx next build` still green — proving the new file is inert locally; `cat vercel.json` is valid JSON (`node -e "JSON.parse(require('fs').readFileSync('vercel.json','utf8'))"` exits 0); `git show --stat` lists exactly `vercel.json` and `docs/DEPLOY.md`.
-EVIDENCE: commit hash, the `vercel.json` contents verbatim, confirmation that no `src/` or `package.json` file appears in the diff.
-**HUMAN CHECKPOINT [HUMAN]**: unchanged and still required — Kavin provisions Neon, imports the repo into Vercel, sets the environment variables, runs `db:push-pg` + `seed` against Neon, registers the webhook, and confirms a live `/demo`. C4 only removes the Build-Command step from that list; it does not deploy anything.
+> **opus-think review: ACCEPTED — `f6c2c50`.** `vercel.json` parses and contains exactly one key: `buildCommand: "npm run build:vercel"` — no framework key, no regions, no headers, no env block, as specified. Diff is `vercel.json` (+3) and `docs/DEPLOY.md` only: **no `src/`, no `package.json`**, so `build:vercel` itself is unedited and C1/C2/C2b are untouched (re-grepped anyway: one `createOrder` at `decide.ts:397`, one `claimIntent(` still first in `executeAllow`, `markIntentConsumed` absent). 64/64, `tsc` clean, tree clean. **No contradiction remains in `docs/DEPLOY.md`**: the original auto-detection finding is amended rather than deleted (it is still true — `vercel.json` is not needed for framework detection), the file states plainly that it exists solely to pin the build command, and step 2 now says the pin is the source of truth and beats a conflicting dashboard value. **Additional check the task did not ask for:** `prisma` is a devDependency, so the CLI resolves during Vercel's install step and `build:vercel` can actually execute there — a missing `prisma` dependency would have made the whole pin useless.
+>
+> **Honest limit on this verdict:** this is design-verified only. `vercel.json` overriding the dashboard, the Neon push, and the deployed app serving `/demo` have never been executed — the repo has never been deployed, and no Neon/Vercel resource was created by any agent (no `.vercel` directory exists). The deploy becomes VERIFIED MANUALLY only when Kavin deploys. Do not describe the deploy as working before then.
 
 ---
 
-## After C1–C4: agy final QA [QUEUED — starts once C4 commits]
+## FINAL QA — independent adversarial re-audit → **agy** [ACTIVE]
+
+FROM: opus-think
+TO: agy (**QA ONLY — never modify source, never implement a fix; report findings and stop**)
+TASK: Independently audit the five landed changes C1, C2, C2b, C3, C4 and the submission's honesty, as the last check before the public push.
+WHY: Every one of these was reviewed only by opus-think, who also wrote their specs — so the specs and the review share an author and a blind spot. Your earlier pass produced F4–F7, all four of which were real. Assume the same is possible again.
+
+SCOPE — audit exactly these, do not re-litigate settled deferrals:
+- **C1 `a6f673a`** — atomic single-use intent claim. The central question: is `claimIntent` genuinely atomic, or merely re-ordered? Attack the compensating revert (`releaseIntentClaim`) for a way to un-consume an intent that has a real order, and look for any path reaching `createOrder` without winning the claim.
+- **C2 `f290097` / C2b `dd54bce`** — session status/expiry and merchant binding in `approveStepUp`. Is approval now equivalent to `requestCheckout`'s L1, or is a third check still missing?
+- **C3 `c52c610` / C4 `f6c2c50`** — deploy readiness. Would a fresh Vercel+Neon deploy following `docs/DEPLOY.md` verbatim actually work, or is a step missing/wrong? Does anything in the docs contradict the checked-in config?
+- **Test integrity** — would any of the six new tests (2× C1, 2× C2, 1× C2b, plus existing) still pass if the check it guards were deleted? Say so plainly if one would.
+- **Demo honesty** — does every id, metric and claim in `README.md`, `docs/SUBMISSION.md`, `docs/DEMO_SCRIPT.md` trace to a real artifact? The canonical ids are `order_TYFPRIpLlJeFpf` / `pay_TYFtu8vjA3C0iT`.
+- **Repo hygiene** — re-run the secret sweeps yourself rather than trusting the recorded results.
+
+INVARIANTS TO ATTACK: only `decide.ts` reaches `createOrder`; BLOCK creates zero Razorpay objects; STEP_UP needs explicit approval and cannot mint a second Order; replay/expiry/merchant binding enforced; webhook dedupe before side effects; reconcile never creates orders; Gemini never receives Razorpay credentials, never authorizes money, never sees catalog `description`; every failure path fails closed.
+
+REPORT FORMAT (per finding): FINDING / SEVERITY / EVIDENCE / REPRODUCTION / AFFECTED INVARIANT / RECOMMENDED FIX / STATUS. Tag every claim CLAIMED / VERIFIED BY TEST / VERIFIED BY CODE INSPECTION / VERIFIED MANUALLY / NOT VERIFIED. Append findings to the `## Findings` section of `docs/AGENTS.md`.
+OUT OF SCOPE: D1, D2, D3, D4 and F11 are accepted deferrals with recorded reasoning — re-reporting them is noise. Challenge the *reasoning* only if you believe a severity call is wrong. Do not rerun the 240-case eval (quota).
+CONSTRAINTS: do not modify any file under `src/`, `app/`, `prisma/`, `scripts/`, or `package.json`. Do not deploy or provision anything.
+ROUTING: findings come to opus-think, who decides severity and whether they block submission, then assigns sonnetCode (routine) or opusCode (money-path/concurrency). **agy never implements its own recommendations.**
+HUMAN CHECKPOINT: none for the audit itself. Any HIGH money-path finding blocks the public push.
 
 agy re-audits C1–C3 only (QA only — never implements). Focus: is the C1 claim genuinely atomic or merely re-ordered; does the C1 test prove a race or only a sequence; does C2 close the approval door without breaking idempotent re-approve; does C3 actually cause a Postgres client to be generated in a Vercel-like build. Report in the FINDING/SEVERITY/EVIDENCE/REPRODUCTION/AFFECTED INVARIANT/RECOMMENDED FIX/STATUS format; opus-think decides acceptance.
 
