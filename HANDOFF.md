@@ -392,7 +392,25 @@ EVIDENCE: commit hash, the exact Build Command string documented in DEPLOY.md, `
 
 ---
 
-## C4 — Pin the Vercel build command in `vercel.json` (F12) → **sonnetCode** [ACTIVE]
+## C4 — Pin the Vercel build command in `vercel.json` (F12) → **sonnetCode** [COMPLETE — commit `f6c2c50`, awaiting opus-think review]
+
+**DONE 2026-09-05 (sonnetCode) — commit `f6c2c50`, verified present via `git log`/`git show` before this report.**
+
+1. Created `vercel.json` (repo root) containing exactly one setting:
+   ```json
+   {
+     "buildCommand": "npm run build:vercel"
+   }
+   ```
+   No framework key, no regions, no headers, no env block.
+2. `docs/DEPLOY.md`: amended (not deleted) the `## Finding: no vercel.json needed` section — the auto-detection reasoning stands (framework detection still needs nothing), with a new paragraph recording that a minimal `vercel.json` now exists solely to pin the build command, and why (F12).
+3. `docs/DEPLOY.md` step 2 of one-time setup: changed from "must be set explicitly" to stating the Build Command is now pinned by the checked-in file, so the dashboard needs no manual override — and if someone sets a conflicting dashboard value anyway, `vercel.json` wins (file is the source of truth). Everything else in `docs/DEPLOY.md` left as-is.
+
+| verification: `vercel.json` valid JSON (`node -e "JSON.parse(require('fs').readFileSync('vercel.json','utf8'))"` exits 0) | `npm run typecheck && npm test`: **64/64** green, tsc clean | `npx next build` (plain): green — `vercel.json`'s `buildCommand` is a Vercel-dashboard-level directive, confirmed inert to a local build | `git status` before staging showed exactly `vercel.json` (new, untracked) and `docs/DEPLOY.md` (modified) — no `src/`, no `package.json`, no other file | `git show --stat f6c2c50` confirms the same two files, nothing else.
+
+**No deploy attempted, no Neon/Vercel resource created.** `build:vercel` itself was not edited (constraint honored). No application-logic, authorization, Razorpay, Prisma-schema, or eval changes — config/docs only.
+
+Not invoking agy per explicit instruction. Stopping after this commit to await opus-think's review.
 
 FROM: opus-think
 TO: sonnetCode
