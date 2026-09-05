@@ -21,28 +21,18 @@ The model can propose. The gateway decides. Only the gateway can pay.
 
 Razorpay AI Buildathon 2026 · Track 1: AI Growth & Agentic Commerce
 
-`64/64 tests` · `240 eval cases, 100% held-out` · `0 unauthorized allows` · `1 code path to money`
+`64/64 tests` · `240 eval cases` · `120 held-out · 100% accuracy` · `0 unauthorized allows` · `1 code path to money`
 
-</div>
-
-<div align="center" style="position: relative; width: 100%; height: 0; padding-top: 56.25%; box-shadow: 0 2px 8px 0 rgba(63,69,81,0.16); margin-top: 1.6em; margin-bottom: 0.9em; overflow: hidden; border-radius: 8px;">
-  <iframe loading="lazy" style="position: absolute; width: 100%; height: 100%; top: 0; left: 0; border: none;"
-    src="https://www.canva.com/design/DAHUWuDXu9s/8pJTK7gbfEOiqFOqO93qYA/watch?embed"
-    allowfullscreen="allowfullscreen" allow="fullscreen"></iframe>
 </div>
 
 <div align="center">
 
 <a href="https://www.canva.com/design/DAHUWuDXu9s/8pJTK7gbfEOiqFOqO93qYA/watch">
-
-<img src="YOUR_THUMBNAIL_URL" alt="AgentIntent demo">
-
+<img src="./docs/demo-cover.svg" alt="Watch the AgentIntent 5-minute demo" width="900">
 </a>
 
 <p>
-  <a href="https://www.canva.com/design/DAHUWuDXu9s/8pJTK7gbfEOiqFOqO93qYA/watch">
-    ▶ Watch the 5-minute demo
-  </a>
+  <a href="https://www.canva.com/design/DAHUWuDXu9s/8pJTK7gbfEOiqFOqO93qYA/watch"><strong>▶ Watch the 5-minute demo on Canva</strong></a>
 </p>
 
 </div>
@@ -259,7 +249,7 @@ Webhook route tested live: 400 on bad signature, 200 on valid, no-op on duplicat
 | [![Next.js](https://img.shields.io/badge/-Next.js_15-000000?style=flat-square&logo=nextdotjs&logoColor=white)](https://nextjs.org) | App Router, server routes + UI, one deployable |
 | [![TypeScript](https://img.shields.io/badge/-TypeScript_strict-3178C6?style=flat-square&logo=typescript&logoColor=white)](https://www.typescriptlang.org) | every model output + API body is typed, Zod-checked |
 | [![React](https://img.shields.io/badge/-React_19-149ECA?style=flat-square&logo=react&logoColor=white)](https://react.dev) | no component lib, no CSS-in-JS |
-| [![Prisma](https://img.shields.io/badge/-Prisma-2D3748?style=flat-square&logo=prisma&logoColor=white)](https://www.prisma.io) [![SQLite](https://img.shields.io/badge/-SQLite-003B57?style=flat-square&logo=sqlite&logoColor=white)](https://www.sqlite.org) [![Postgres](https://img.shields.io/badge/-Neon-4169E1?style=flat-square&logo=postgresql&logoColor=white)](https://neon.tech) | SQLite local, Neon on deploy |
+| [![Prisma](https://img.shields.io/badge/-Prisma-2D3748?style=flat-square&logo=prisma&logoColor=white)](https://www.prisma.io) [![SQLite](https://img.shields.io/badge/-SQLite-003B57?style=flat-square&logo=sqlite&logoColor=white)](https://www.sqlite.org) [![Neon](https://img.shields.io/badge/-Neon-4169E1?style=flat-square&logo=postgresql&logoColor=white)](https://neon.tech) | SQLite local, Neon on deploy |
 | [![Gemini](https://img.shields.io/badge/-Gemini_Flash-8E75B2?style=flat-square&logo=googlegemini&logoColor=white)](https://ai.google.dev) | compiler, buyer, judge — never the authorizer |
 | [![Zod](https://img.shields.io/badge/-Zod-3E67B1?style=flat-square&logo=zod&logoColor=white)](https://zod.dev) | the boundary between model output and the gateway |
 | [![Razorpay](https://img.shields.io/badge/-Razorpay_Test_Mode-0C2451?style=flat-square&logo=razorpay&logoColor=white)](https://razorpay.com) | official SDK, Orders API, Checkout.js, signed webhooks |
@@ -276,7 +266,7 @@ src/intent/          compiler.ts        src/agent/  buyer.ts (4 tools, no paymen
 src/razorpay/        client.ts (test-key guard) · orders.ts · payments.ts
 src/webhooks/        handler.ts — dedupe + amount-mismatch flagging
 src/reconciliation/  reconcile.ts — observes only, never creates
-src/audit/           logger.ts — append-only
+src/audit/            logger.ts — append-only
 src/eval/            240 cases, zero Razorpay imports
 app/demo/            the live authorization-ledger UI
 ```
