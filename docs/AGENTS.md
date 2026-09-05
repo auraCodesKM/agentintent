@@ -30,7 +30,14 @@ Earlier: judge confidence calibration `0427fe7`; TOCTOU + single-use intent fix 
 
 ## Current Task
 
-None active. Queue is drained of agent-executable work.
+**Builder queue v3 active** (`HANDOFF.md`), from agy findings F4–F7. Strictly serial, one coding agent at a time:
+
+- **[ACTIVE] C1 — atomic single-use intent claim (F5)** · owner: **opusCode** · money-path concurrency
+- **[BLOCKED on C1 review] C2 — revalidate parent session in `approveStepUp` (F6)** · owner: sonnetCode
+- **[BLOCKED on C2] C3 — deployment-safe Prisma generation (F4) + stale command (F7)** · owner: sonnetCode
+- **[QUEUED] agy re-audit of C1–C3** — QA only
+
+C1 and C2 both edit `src/gateway/decide.ts`; C2 must not start until C1 is committed and reviewed by opus-think.
 
 ## Important Decisions
 
@@ -56,6 +63,18 @@ The guard required `status === "STEP_UP"`, but the first approve flips status to
 
 **F3 — Order-id transcription typo** · severity: LOW (demo credibility) · discovered by: builder · 2026-09-05 · `HANDOFF.md` historical lines · **status: CORRECTED downstream.**
 Canonical DB-verified ids for the real captured payment: **`order_TYFPRIpLlJeFpf`** (lowercase `l`) / **`pay_TYFtu8vjA3C0iT`**, ₹7,499. `docs/DEMO_SCRIPT.md` and `scripts/webhook_failure_demo.ts` use the correct form. **Never retype these by hand — copy from here or the DB.** Older `HANDOFF.md` lines keep the wrong `LL` spelling because that log is append-only.
+
+**F4 — Vercel/Neon Prisma generation blocker** · severity: CRITICAL (deploy) · discovered by: agy · 2026-09-05 · `package.json`, `docs/DEPLOY.md` · **status: CONFIRMED by opus-think (code inspection), assigned C3 → sonnetCode.**
+`package.json` has no `postinstall` and no `prisma generate` step, and `docs/DEPLOY.md` never mentions one. Vercel falls back to Prisma's own postinstall, which reads the default `prisma/schema.prisma` — provider `sqlite`. The deployed app would run a SQLite client against a `postgres://` `DATABASE_URL` and fail **at runtime, after a green build** — the worst failure shape, because CI looks healthy. Decision: explicit `build:vercel` script (`prisma generate --schema=prisma/schema.postgresql.prisma && next build`) plus a documented Vercel Build Command, rather than a shell-variable trick or an undocumented dashboard override.
+
+**F5 — Cross-cart concurrency TOCTOU on single-use intents** · severity: HIGH (money path) · discovered by: agy · 2026-09-05 · `src/gateway/decide.ts` `executeAllow`, `src/gateway/session.ts` · **status: CONFIRMED by opus-think (code inspection), assigned C1 → opusCode.**
+`getIntentStatus()` is a plain read; `markIntentConsumed()` is an unconditional `update` that runs **after** `createOrder` returns. The read-to-write window therefore spans a network round trip to Razorpay. Two concurrent approvals for two *different* carts on one ACTIVE intent both observe ACTIVE, compute *different* replay keys (so both reservations succeed), and both reach `createOrder` → **two real Orders from a single-use intent.** The B1 fix (F1) closed only the *sequential* case; its passing test is not coverage for this. Amplified by D3 (the approve endpoint is unauthenticated). Fix direction decided: atomic conditional transition (`updateMany` with `status: "ACTIVE"` in the `WHERE`) performed **before** `createOrder`, in `executeAllow` — the single point both `requestCheckout` and `approveStepUp` funnel through. A check-before-write fix is explicitly not acceptable.
+
+**F6 — `approveStepUp` does not revalidate the parent session** · severity: MEDIUM · discovered by: agy · 2026-09-05 · `src/gateway/decide.ts` · **status: CONFIRMED by opus-think, assigned C2 → sonnetCode.**
+`requestCheckout` enforces L1 session status + expiry; `approveStepUp` checks only intent expiry, so a STEP_UP raised under a since-expired or deactivated session can still be approved into a real Order. The function's own docstring claims it "re-runs L1/L2; does not skip checks" — currently false. Approval must not be a weaker door into the money path than the front door.
+
+**F7 — Stale deploy command printed by `gen_pg_schema.ts`** · severity: LOW · discovered by: agy · 2026-09-05 · `scripts/gen_pg_schema.ts` (~line 20) · **status: CONFIRMED, bundled into C3.**
+Prints `prisma migrate deploy` as the deploy usage, contradicting the decided Neon strategy (`prisma db push`). Wrong instruction surfaced at exactly the moment someone is deploying — the SQLite-dialect migrations must never run against Postgres.
 
 ## Deferred Issues
 
@@ -91,6 +110,12 @@ Only the human (Kavin) can complete these. None may be marked complete by an age
 
 ## Next Recommended Action
 
-**Assign `agy` an independent adversarial QA pass** before the public push — it is the one form of verification the team has not yet had, and every builder claim so far has been checked only by opus-think. Priority targets: `approveStepUp`/`requestCheckout` state machine (attack F1/F2 from a different angle), replay + expiry + merchant binding, whether the 59 tests prove security properties or merely execute code, and demo honesty (does every claim in `README.md` / `docs/SUBMISSION.md` trace to a real artifact?). agy reports findings here or to opus-think; it must not modify source.
+**opusCode executes C1** (atomic single-use intent claim). It is the only finding that can produce two real Orders from one intent, and the submission's headline security claim is that intents are single-use — so this is the one defect a technical judge reading `decide.ts` could actually find. F4 is CRITICAL but blocks nothing until Neon is provisioned by the human; F6/F7 are cheap and follow.
+
+**Submission blockers, in order:** C1 (money-path correctness) → C3 + human Neon/Vercel provisioning (deploy) → human video + GitHub push. C2 is not a blocker but is cheap and closes a real gap.
+
+---
+
+*(historical, now complete)* **agy independent adversarial QA pass** before the public push — it is the one form of verification the team has not yet had, and every builder claim so far has been checked only by opus-think. Priority targets: `approveStepUp`/`requestCheckout` state machine (attack F1/F2 from a different angle), replay + expiry + merchant binding, whether the 59 tests prove security properties or merely execute code, and demo honesty (does every claim in `README.md` / `docs/SUBMISSION.md` trace to a real artifact?). agy reports findings here or to opus-think; it must not modify source.
 
 In parallel, the human checkpoints above are the critical path to submission — the repository itself is ready.

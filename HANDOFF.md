@@ -168,7 +168,95 @@ Protocol: work strictly in order (B1 blocks nothing but is highest risk-value; B
 - **Verify/Evidence**: paste sweep command outputs (empty) into Decisions log.
 - **HUMAN follow-up**: create GitHub repo, push, confirm Settings→visibility.
 
-### BUILDER QUEUE v2 STATUS: B1–B5 ALL COMPLETE and verified by opus-think (see `docs/AGENTS.md`). No implementation task is currently assigned. Do not start code work without a new task below.
+### BUILDER QUEUE v2 STATUS: B1–B5 ALL COMPLETE and verified by opus-think (see `docs/AGENTS.md`).
+
+# BUILDER QUEUE v3 — ACTIVE (from agy findings F4–F7; triaged by opus-think 2026-09-05)
+
+**Strictly serial: C1 → C2 → C3. Only one coding agent modifies the repo at a time.** C1 and C2 both touch `src/gateway/decide.ts`; C2 must not start until C1 is committed AND opus-think has reviewed it. Each task: run `npm run typecheck && npm test` before and after; one commit per task with the session trailer; then update BOTH `HANDOFF.md` (status) and `docs/AGENTS.md` (findings/evidence). Never add a second path to `createOrder`.
+
+---
+
+## C1 — Atomic single-use intent claim (F5) → **opusCode** [ACTIVE]
+
+FROM: opus-think
+TO: opusCode (money-path / concurrency specialist — NOT sonnetCode)
+TASK: Make the single-use-intent transition provably atomic under concurrent requests.
+WHY: **F5 confirmed real by code inspection.** `getIntentStatus()` is a plain read and `markIntentConsumed()` is an unconditional `update`, executed only *after* `createOrder` returns. The read-to-write window therefore spans a network round trip to Razorpay. Two concurrent approvals for two *different* carts on one ACTIVE intent both observe ACTIVE, compute *different* replay keys (so both reservations succeed), and both reach `createOrder` — two real Orders from an intent the product claims is single-use. Sequential protection (B1) does not close this; do not treat the passing B1 test as coverage.
+
+FILES:
+- `src/gateway/decide.ts` — `executeAllow` (~line 317+), and the existing pre-checks in `requestCheckout` / `approveStepUp` (leave those in place as fast paths).
+- `src/gateway/session.ts` — `markIntentConsumed`, `getIntentStatus`.
+- `tests/` — new concurrency regression test.
+
+REQUIRED APPROACH (decided by opus-think — do not substitute a check-before-write):
+1. Replace the post-order `markIntentConsumed` with an **atomic conditional transition performed BEFORE `createOrder`**: a single `updateMany({ where: { id: intentId, status: "ACTIVE" }, data: { status: "CONSUMED" } })`. `count === 1` means this caller won the claim and may proceed; `count === 0` means another caller already consumed the intent → return an audited `BLOCK` with `REPLAY_DETECTED` via the existing `persistDecision` helper. One SQL `UPDATE` with the status in the `WHERE` clause is atomic under both SQLite's write lock and Postgres row locking; a read followed by a write is not.
+2. `executeAllow` is the correct and only insertion point — **both** `requestCheckout` and `approveStepUp` funnel through it (lines 179 and 285), so one fix covers both paths. Do not add the claim in two places.
+3. Claiming before `createOrder` means a Razorpay failure would strand the intent as CONSUMED. Add a **bounded compensating revert** in the existing `catch`: revert to ACTIVE only via `updateMany({ where: { id: intentId, status: "CONSUMED" } , ... })` and only when no `razorpayOrder` row exists for that intent. State in your commit message whether this fully or only partially mitigates D1 (the replay-key reservation is a separate row and may still linger — say so honestly rather than claiming D1 is closed).
+4. The same-intent+same-cart idempotent retry must keep working: it returns at the `existingOrder` lookup *before* `executeAllow`, so it must never reach the claim. Verify this by reading, not by assuming.
+
+CONSTRAINTS / INVARIANTS:
+- No new path to `createOrder`. Money-path grep must still return only `decide.ts`.
+- Fail closed: a lost claim is a BLOCK, never an ALLOW and never a throw that escapes as a 500.
+- Do not reorder the existing L1/L2/L3 layers, change judge or policy semantics, or touch `src/razorpay/*`.
+- No schema change if the `updateMany` approach is used. If you conclude a schema change is genuinely required, STOP and write a proposal here instead of implementing it — a migration would also need `npm run db:gen-pg` and the Neon `db push` path re-checked.
+
+VERIFICATION (all required):
+- `npm run typecheck && npm test` green.
+- **A real concurrency regression test**: two different carts on one intent, both STEP_UP, approvals fired with `Promise.all` (not sequentially) → exactly one ALLOW with an order, one BLOCK `REPLAY_DETECTED`, `createOrder` mocked and asserted **called exactly once**, and exactly one `razorpayOrder` row for the intent. Add the equivalent for two concurrent `requestCheckout` calls on different carts.
+- **Honesty requirement**: SQLite serializes writes, so this test may not reproduce true OS-level parallelism. State explicitly in `docs/AGENTS.md` whether the test is a true race reproduction or a deterministic interleaving that proves the guard's logic. Do not claim more than the test shows.
+- Money-path grep clean.
+
+EVIDENCE: commit hash, test names, `createOrder` call-count assertion result, the honesty statement above, and whether D1 is now fully or partially mitigated.
+HUMAN CHECKPOINT: none for C1.
+
+---
+
+## C2 — Revalidate parent session in `approveStepUp` (F6) → **sonnetCode** [BLOCKED on C1 review]
+
+FROM: opus-think
+TO: sonnetCode
+TASK: Make `approveStepUp` revalidate the parent session's status and expiry, matching `requestCheckout`.
+WHY: **F6 confirmed real.** `requestCheckout` enforces L1 session active/not-expired; `approveStepUp` checks only intent expiry. Its own docstring says it "re-runs L1/L2; does not skip checks" — today that is false. A STEP_UP raised under a session that has since expired or been deactivated can still be approved into a real Order. Approval must not be a weaker door into the money path than the front door.
+
+FILES: `src/gateway/decide.ts` (`approveStepUp`), `src/gateway/session.ts` (reuse the existing session check at line ~35 — do not write a second one), `tests/decide.test.ts`.
+
+REQUIREMENTS:
+- Reuse the existing session-validation helper. Do not duplicate the status/expiry logic.
+- Place the check with the other L1 revalidation, before any reservation or order work.
+- Failure → `ApprovalError` with an existing code that already maps in `app/api/checkout/approve/route.ts` (check the mapping; do not invent a new code and leave the route returning 500).
+
+CONSTRAINTS: no new `createOrder` path; do not weaken any existing check; do not touch C1's atomic claim.
+VERIFICATION: `npm run typecheck && npm test`; new regression test — STEP_UP raised, session then forced expired/inactive in the DB, approval rejected, `createOrder` never called. Money-path grep clean.
+EVIDENCE: commit hash, test name, confirmation the API route returns the correct status code (not 500).
+HUMAN CHECKPOINT: none.
+
+---
+
+## C3 — Deployment-safe Prisma generation (F4) + stale command (F7) → **sonnetCode** [BLOCKED on C2]
+
+FROM: opus-think
+TO: sonnetCode
+TASK: Guarantee the Vercel build generates a **Postgres** Prisma client, and fix the stale command string.
+WHY: **F4 confirmed real and is a hard deploy blocker.** `package.json` has no `postinstall` and no `prisma generate` step, and `docs/DEPLOY.md` never mentions one. Vercel therefore relies on Prisma's own postinstall, which reads the default `prisma/schema.prisma` — provider `sqlite`. The deployed app would run a SQLite client against a `postgres://` `DATABASE_URL` and fail at runtime, after a green build. **F7**: `scripts/gen_pg_schema.ts` line ~20 prints `prisma migrate deploy` as the deploy usage, contradicting the project's decided Neon strategy (`prisma db push`) — a wrong instruction printed at exactly the moment someone is deploying.
+
+FILES: `package.json`, `docs/DEPLOY.md`, `scripts/gen_pg_schema.ts`, `.env.example` (only if a var is genuinely needed).
+
+REQUIREMENTS:
+- Add an explicit `build:vercel` script that generates from the Postgres schema before building: `prisma generate --schema=prisma/schema.postgresql.prisma && next build`. Then document in `docs/DEPLOY.md` that Vercel's **Build Command must be set to `npm run build:vercel`** — an explicit, documented setting, not a shell-variable trick or an undocumented dashboard override. Leave the plain `build` script alone so local SQLite development is untouched.
+- Fix the `gen_pg_schema.ts` printed usage line to the `db push` strategy.
+- Re-read `docs/DEPLOY.md` end to end and correct anything else that contradicts the decided strategy (SQLite-dialect migrations must never run against Neon).
+
+CONSTRAINTS: config and docs only — no source-logic changes; do not switch the dev schema provider; `prisma/schema.postgresql.prisma` stays generated (never hand-edited).
+VERIFICATION: `npm run typecheck && npm test && npx next build` green; `npm run db:gen-pg` still idempotent (clean `git diff` after rerun); `npm run build:vercel` runs locally at least as far as a successful `prisma generate` against the Postgres schema (a full build without a live Neon URL is fine — generation does not need a reachable DB). Confirm the local SQLite flow still works.
+EVIDENCE: commit hash, the exact Build Command string documented in DEPLOY.md, `prisma generate` output line showing the Postgres schema was used.
+**HUMAN CHECKPOINT [HUMAN]**: Kavin must set the Vercel Build Command to `npm run build:vercel` when configuring the project, and provision Neon first. No agent can do or verify this. The deploy is NOT proven until a deployed instance serves `/demo` against Neon.
+
+---
+
+## After C1–C3: agy re-audit [QUEUED]
+
+agy re-audits C1–C3 only (QA only — never implements). Focus: is the C1 claim genuinely atomic or merely re-ordered; does the C1 test prove a race or only a sequence; does C2 close the approval door without breaking idempotent re-approve; does C3 actually cause a Postgres client to be generated in a Vercel-like build. Report in the FINDING/SEVERITY/EVIDENCE/REPRODUCTION/AFFECTED INVARIANT/RECOMMENDED FIX/STATUS format; opus-think decides acceptance.
+
 
 ## Q1 — Independent adversarial QA pass (assigned to `agy`)
 
