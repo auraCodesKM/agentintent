@@ -190,7 +190,11 @@ export async function requestCheckout(intentId: string, cartId: string): Promise
 export async function approveStepUp(authorizationId: string): Promise<CheckoutDecision> {
   const auth = await prisma.authorizationDecision.findUnique({ where: { id: authorizationId } })
   if (!auth) throw new ApprovalError("AUTHORIZATION_NOT_FOUND")
-  if (auth.decision !== "STEP_UP" || auth.status !== "STEP_UP") {
+  // "APPROVED" is let through so a repeat call on the SAME authorization
+  // (idempotent re-approve) can still reach the existingOrder check below and
+  // return the order it already produced. Any other status (BLOCKED,
+  // REJECTED, PENDING) is a dead authorization and never approvable.
+  if (auth.decision !== "STEP_UP" || (auth.status !== "STEP_UP" && auth.status !== "APPROVED")) {
     throw new ApprovalError("AUTHORIZATION_NOT_APPROVABLE")
   }
 
@@ -223,6 +227,29 @@ export async function approveStepUp(authorizationId: string): Promise<CheckoutDe
       semantic_confidence: auth.semanticConfidence,
     }
   }
+
+  // Intents are single-use. A consumed intent may not approve a NEW
+  // authorization — deliberately AFTER the existingOrder check above so the
+  // idempotent re-approval of THIS SAME authorization (which already produced
+  // the order that consumed the intent) still returns that order. A second,
+  // different STEP_UP authorization on the same intent hits this branch and
+  // is rejected instead of minting a second Order.
+  if ((await getIntentStatus(intent.intent_id)) === "CONSUMED") {
+    await prisma.authorizationDecision.update({
+      where: { id: authorizationId },
+      data: { status: "REJECTED" },
+    })
+    await audit({
+      eventType: "AUTHORIZATION_BLOCKED",
+      actor: "gateway",
+      intentId: intent.intent_id,
+      sessionId: intent.session_id,
+      reasonCode: "REPLAY_DETECTED",
+      metadata: { authorization_id: authorizationId, reason: "intent already consumed by another authorization" },
+    })
+    throw new ApprovalError("AUTHORIZATION_NOT_APPROVABLE")
+  }
+
   if (!(await replayKeyExists(replayKey))) {
     try {
       await reserveReplayKey(replayKey, intent.intent_id)

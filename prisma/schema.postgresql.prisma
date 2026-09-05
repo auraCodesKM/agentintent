@@ -85,7 +85,7 @@ model AuthorizationDecision {
   intentId           String   @map("intent_id")
   cartId             String   @map("cart_id")
   decision           String // ALLOW | STEP_UP | BLOCK
-  status             String   @default("PENDING") // PENDING | BLOCKED | STEP_UP | APPROVED | ALLOWED
+  status             String   @default("PENDING") // PENDING | BLOCKED | STEP_UP | APPROVED | ALLOWED | REJECTED
   reasonCodes        String   @map("reason_codes") // JSON string array
   semanticConfidence Float?   @map("semantic_confidence")
   createdAt          DateTime @default(now()) @map("created_at")

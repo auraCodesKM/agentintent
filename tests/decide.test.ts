@@ -15,7 +15,7 @@ vi.mock("@/semantic/judge", async (importOriginal) => {
 
 process.env.DATABASE_URL = "file:./dev.db"
 
-const { requestCheckout } = await import("@/gateway/decide")
+const { requestCheckout, approveStepUp, ApprovalError } = await import("@/gateway/decide")
 const { createSession, proposeCart } = await import("@/gateway/session")
 const { prisma } = await import("@/lib/db")
 const { nanoid } = await import("nanoid")
@@ -135,5 +135,48 @@ describe("decide.ts authorization boundary", () => {
     expect(decision.reason_codes).toContain("INTENT_EXPIRED")
     expect(judgeCartMock).not.toHaveBeenCalled()
     expect(createOrderMock).not.toHaveBeenCalled()
+  })
+
+  it("B1: a consumed intent cannot approve a second STEP_UP from a different cart (single-use enforced on approveStepUp)", async () => {
+    judgeCartMock.mockResolvedValue({ match: true, confidence: 0.6, violated_constraints: [], reason: "unsure" })
+    const { intentId } = await makeIntent({ max_amount: 20000, max_quantity: 5, allowed_categories: ["headphones"] })
+
+    const cartA = await proposeCart(intentId, [{ sku: "HP-004", quantity: 1 }]) // ₹7,499
+    const stepUpA = await requestCheckout(intentId, cartA.cartId)
+    expect(stepUpA.decision).toBe("STEP_UP")
+    expect(stepUpA.authorization_id).not.toBeNull()
+
+    const cartB = await proposeCart(intentId, [{ sku: "HP-005", quantity: 1 }]) // ₹13,999, different cart
+    const stepUpB = await requestCheckout(intentId, cartB.cartId)
+    expect(stepUpB.decision).toBe("STEP_UP")
+    expect(stepUpB.authorization_id).not.toBeNull()
+    expect(stepUpB.authorization_id).not.toBe(stepUpA.authorization_id)
+
+    // Approve #1 succeeds: real ALLOW, one order, intent now CONSUMED.
+    const approve1 = await approveStepUp(stepUpA.authorization_id!)
+    expect(approve1.decision).toBe("ALLOW")
+    expect(approve1.razorpay_order_id).not.toBeNull()
+    expect(createOrderMock).toHaveBeenCalledTimes(1)
+
+    // Approve #2 (different cart, same now-consumed intent) must be rejected,
+    // not silently mint a second Order.
+    await expect(approveStepUp(stepUpB.authorization_id!)).rejects.toThrow(ApprovalError)
+    await expect(approveStepUp(stepUpB.authorization_id!)).rejects.toMatchObject({
+      code: "AUTHORIZATION_NOT_APPROVABLE",
+    })
+    expect(createOrderMock).toHaveBeenCalledTimes(1) // still exactly once — no second order
+
+    const authB = await prisma.authorizationDecision.findUnique({ where: { id: stepUpB.authorization_id! } })
+    expect(authB?.status).toBe("REJECTED")
+
+    // Idempotent re-approval of auth #1 (the one that already produced an
+    // order) still returns that SAME order, unaffected by consumption.
+    const reapprove1 = await approveStepUp(stepUpA.authorization_id!)
+    expect(reapprove1.decision).toBe("ALLOW")
+    expect(reapprove1.razorpay_order_id).toBe(approve1.razorpay_order_id)
+    expect(createOrderMock).toHaveBeenCalledTimes(1) // no new order from the idempotent re-approve
+
+    const orderRows = await prisma.razorpayOrder.count({ where: { intentId } })
+    expect(orderRows).toBe(1)
   })
 })
