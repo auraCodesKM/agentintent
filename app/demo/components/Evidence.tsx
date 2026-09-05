@@ -1,6 +1,6 @@
 "use client"
 
-import type { AuditEvent, EvalMetricsRow } from "../lib"
+import type { AuditEvent, EvalMetricsRow, LiveEvalResult } from "../lib"
 
 const BLOCK_EVENTS = ["AUTHORIZATION_BLOCKED", "POLICY_FAILED", "PAYMENT_FAILED"]
 const ALLOW_EVENTS = ["AUTHORIZATION_ALLOWED", "ORDER_CREATED", "PAYMENT_CAPTURED", "STEP_UP_APPROVED"]
@@ -28,7 +28,9 @@ export function AuditLedger({ events }: { events: AuditEvent[] }): React.ReactEl
             >
               <td className="ledger__time">{e.created_at.slice(11, 19)}</td>
               <td className="ledger__event">{e.event_type}</td>
-              <td className="ledger__reason">{e.reason_code ?? ""}</td>
+              <td className="ledger__reason">
+                {e.reason_code ? e.reason_code : <span className="faint">—</span>}
+              </td>
               <td className="ledger__actor">{e.actor}</td>
             </tr>
           ))}
@@ -45,10 +47,83 @@ const pct = (n: number): string => {
 }
 
 /**
- * T10 — measured constants, rendered static. They are not count-up animated,
- * because animation would imply a computation happening now. It is not.
+ * The one genuinely live moment in the evaluation section: a real, bounded,
+ * stratified sample of the held-out split, executed by the same
+ * runEvaluation()/computeMetrics() the CLI script runs — POST /api/eval/run.
+ * The button never fires on page load; it only runs when a viewer asks for
+ * it, and it never claims to be the full 240 (or full 120) — the copy always
+ * states the real sample size returned by the server.
  */
-export function EvidenceStrip({ metrics }: { metrics: EvalMetricsRow[] | null }): React.ReactElement {
+export function LiveEvaluation({
+  busy,
+  error,
+  result,
+  onRun,
+}: {
+  busy: boolean
+  error: string
+  result: LiveEvalResult | null
+  onRun: () => void
+}): React.ReactElement {
+  return (
+    <div className="live-eval">
+      <div className="band__head" style={{ marginBottom: 16 }}>
+        <span className="t-zone">live gateway evaluation · zero razorpay calls</span>
+      </div>
+      <div className="live-eval__row">
+        <button type="button" className="btn btn--ghost" onClick={onRun} disabled={busy}>
+          {busy ? "running evaluation…" : "run evaluation"}
+        </button>
+        {busy && (
+          <span className="status-text">
+            executing real policy + Gemini judge calls against a held-out sample — no Razorpay calls…
+          </span>
+        )}
+        {error && <span className="status-text status-text--error">{error}</span>}
+      </div>
+
+      {result && (
+        <div className="live-eval__result">
+          <p className="t-micro muted" style={{ marginBottom: 20 }}>
+            live sample · {result.sample_size} of {result.held_out_total} held-out cases · just executed ·{" "}
+            {(result.duration_ms / 1000).toFixed(1)}s · {result.judge_calls} judge call
+            {result.judge_calls === 1 ? "" : "s"} ·{" "}
+            <span className="is-allow">{result.razorpay_calls} razorpay calls</span>
+          </p>
+          <div className="figures">
+            {(
+              [
+                [String(result.metrics.cases), "cases run"],
+                [pct(result.metrics.accuracy), "accuracy"],
+                [`${result.metrics.falseBlocks}`, "false blocks"],
+                [`${result.metrics.unauthorizedAllows}`, "unauthorized allows"],
+              ] as [string, string][]
+            ).map(([value, label]) => (
+              <div className="figure" key={label}>
+                <div className="t-figure">{value}</div>
+                <span className="figure__label t-micro">{label}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+    </div>
+  )
+}
+
+/**
+ * T10 — the precomputed, full-set baseline. Measured constants, rendered
+ * static. They are not count-up animated, because animation would imply a
+ * computation happening now. It is not — `generatedAt` says when it actually
+ * ran, so this can never be mistaken for the live sample above.
+ */
+export function EvidenceStrip({
+  metrics,
+  generatedAt,
+}: {
+  metrics: EvalMetricsRow[] | null
+  generatedAt: string | null
+}): React.ReactElement {
   if (!metrics) {
     return (
       <p className="t-data">
@@ -72,6 +147,14 @@ export function EvidenceStrip({ metrics }: { metrics: EvalMetricsRow[] | null })
 
   return (
     <>
+      <div className="band__head" style={{ marginBottom: 16 }}>
+        <span className="t-zone">precomputed baseline · full evaluation</span>
+        {generatedAt && (
+          <span className="band__note">
+            recorded {new Date(generatedAt).toISOString().slice(0, 16).replace("T", " ")} UTC — not just computed
+          </span>
+        )}
+      </div>
       <div className="figures">
         {figures.map(([value, label], i) => (
           <div className="figure" key={label} style={{ ["--i" as string]: i }}>

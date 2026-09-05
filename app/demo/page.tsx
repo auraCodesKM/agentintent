@@ -10,7 +10,7 @@ import { SystemTrace, TrustBoundary } from "./components/TrustBoundary"
 import { BuyerTrace, ContractChips, ProposedCart } from "./components/Untrusted"
 import { AuthorizationPlate, DecisionPlate, LayerRail } from "./components/Gateway"
 import { ExecutionAbsent, ExecutionHeld, RazorpayZone } from "./components/Execution"
-import { AuditLedger, EvidenceStrip } from "./components/Evidence"
+import { AuditLedger, EvidenceStrip, LiveEvaluation } from "./components/Evidence"
 import {
   boundaryState,
   deriveCart,
@@ -20,6 +20,7 @@ import {
   type Contract,
   type Decision,
   type EvalMetricsRow,
+  type LiveEvalResult,
   type OrderInfo,
   type Phase,
   type ReconcileResult,
@@ -52,6 +53,10 @@ export default function DemoPage(): React.ReactElement {
   const [decision, setDecision] = useState<Decision | null>(null)
   const [auditEvents, setAuditEvents] = useState<AuditEvent[]>([])
   const [evalMetrics, setEvalMetrics] = useState<EvalMetricsRow[] | null>(null)
+  const [evalGeneratedAt, setEvalGeneratedAt] = useState<string | null>(null)
+  const [liveEvalBusy, setLiveEvalBusy] = useState(false)
+  const [liveEvalError, setLiveEvalError] = useState<string>("")
+  const [liveEvalResult, setLiveEvalResult] = useState<LiveEvalResult | null>(null)
   const [reconcileResult, setReconcileResult] = useState<ReconcileResult | null>(null)
   const [reconcileError, setReconcileError] = useState<string>("")
   const [order, setOrder] = useState<OrderInfo | null>(null)
@@ -129,11 +134,34 @@ export default function DemoPage(): React.ReactElement {
   useEffect(() => {
     fetch("/api/eval/results")
       .then((r) => (r.ok ? r.json() : null))
-      .then((d: { metrics: EvalMetricsRow[] } | null) => {
-        if (d) setEvalMetrics(d.metrics)
+      .then((d: { metrics: EvalMetricsRow[]; generated_at?: string } | null) => {
+        if (d) {
+          setEvalMetrics(d.metrics)
+          setEvalGeneratedAt(d.generated_at ?? null)
+        }
       })
       .catch(() => undefined)
   }, [])
+
+  // Real, user-triggered live evaluation — POST /api/eval/run. Never fired
+  // automatically; runs a real (bounded, deterministic) sample, never a fake one.
+  async function runLiveEval(): Promise<void> {
+    setLiveEvalBusy(true)
+    setLiveEvalError("")
+    try {
+      const res = await fetch("/api/eval/run", { method: "POST" })
+      const data = (await res.json()) as Partial<LiveEvalResult> & { error?: string }
+      if (!res.ok || data.status !== "COMPLETED") {
+        setLiveEvalError(data.error ?? String(res.status))
+      } else {
+        setLiveEvalResult(data as LiveEvalResult)
+      }
+    } catch (err) {
+      setLiveEvalError(String(err))
+    } finally {
+      setLiveEvalBusy(false)
+    }
+  }
 
   // Bounded, visibility-aware polling for the one thing a Razorpay redirect
   // never proves by itself: whether the payment actually captured. Same
@@ -582,7 +610,7 @@ export default function DemoPage(): React.ReactElement {
             <div className="band__body">
               <div className="band__head">
                 <span className="t-zone">evidence</span>
-                <span className="band__note">append-only audit trail · offline evaluation</span>
+                <span className="band__note">append-only audit trail · live and precomputed evaluation</span>
               </div>
 
               <div className="band__head" style={{ marginBottom: 20 }}>
@@ -599,9 +627,17 @@ export default function DemoPage(): React.ReactElement {
 
               <div className="band__head" style={{ marginTop: 72, marginBottom: 20 }}>
                 <h3 className="t-layer">Evaluation</h3>
-                <span className="band__note">offline · zero Razorpay calls</span>
+                <span className="band__note">real gateway execution, never Razorpay</span>
               </div>
-              <EvidenceStrip metrics={evalMetrics} />
+              <LiveEvaluation
+                busy={liveEvalBusy}
+                error={liveEvalError}
+                result={liveEvalResult}
+                onRun={runLiveEval}
+              />
+              <div style={{ marginTop: 40 }}>
+                <EvidenceStrip metrics={evalMetrics} generatedAt={evalGeneratedAt} />
+              </div>
 
               <p className="method" style={{ marginTop: 64 }}>
                 AI proposes. The gateway authorizes. Razorpay executes. — there is no path in this

@@ -1454,6 +1454,23 @@ a {
   max-width: 100%;
 }
 
+/* -------------------------------------------------------- live evaluation */
+
+.live-eval {
+  max-width: 900px;
+}
+
+.live-eval__row {
+  display: flex;
+  align-items: center;
+  gap: 18px;
+  flex-wrap: wrap;
+}
+
+.live-eval__result {
+  margin-top: 28px;
+}
+
 /* --------------------------------------------------- evidence figures (T10) */
 
 .figures {

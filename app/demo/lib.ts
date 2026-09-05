@@ -48,6 +48,18 @@ export interface EvalMetricsRow {
   p95LatencyMs?: number
 }
 
+/** Exact response shape of POST /api/eval/run — a real, just-executed sample. */
+export interface LiveEvalResult {
+  status: "COMPLETED"
+  generated_at: string
+  duration_ms: number
+  judge_calls: number
+  razorpay_calls: number
+  sample_size: number
+  held_out_total: number
+  metrics: EvalMetricsRow
+}
+
 export interface OrderInfo {
   razorpay_order_id: string
   amount_paise: number
