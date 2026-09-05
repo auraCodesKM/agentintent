@@ -5,7 +5,15 @@ import { nanoid } from "nanoid"
 import { Prisma } from "@prisma/client"
 import { prisma } from "@/lib/db"
 import { audit } from "@/audit/logger"
-import { claimIntent, getCart, getIntent, getIntentStatus, releaseIntentClaim } from "@/gateway/session"
+import {
+  claimIntent,
+  getCart,
+  getIntent,
+  getIntentStatus,
+  releaseIntentClaim,
+  requireActiveSession,
+  SessionError,
+} from "@/gateway/session"
 import { makeReplayKey, replayKeyExists, reserveReplayKey } from "@/gateway/replay"
 import { checkPolicy, isIntentExpired, type MerchantPolicy } from "@/policy/engine"
 import { priceCart } from "@/catalog/catalog"
@@ -201,6 +209,19 @@ export async function approveStepUp(authorizationId: string): Promise<CheckoutDe
   const intent = await getIntent(auth.intentId)
   const cart = await getCart(auth.cartId)
   if (!intent || !cart) throw new ApprovalError("AUTHORIZATION_NOT_APPROVABLE")
+
+  // L1 revalidation, matching requestCheckout: a STEP_UP raised under a
+  // session that has since expired or been deactivated must not be
+  // approvable into a real Order. Reuses the same helper requestCheckout's
+  // inline check is equivalent to — do not duplicate the status/expiry
+  // logic here.
+  try {
+    await requireActiveSession(intent.session_id)
+  } catch (err) {
+    if (err instanceof SessionError) throw new ApprovalError("AUTHORIZATION_NOT_APPROVABLE")
+    throw err
+  }
+
   if (isIntentExpired(intent, new Date())) throw new ApprovalError("INTENT_EXPIRED")
 
   const priced = priceCart(cart.items)

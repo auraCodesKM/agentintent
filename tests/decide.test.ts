@@ -180,6 +180,49 @@ describe("decide.ts authorization boundary", () => {
     expect(orderRows).toBe(1)
   })
 
+  it("C2: approveStepUp rejects a STEP_UP whose parent session has since expired, without approving or creating an order", async () => {
+    judgeCartMock.mockResolvedValue({ match: true, confidence: 0.6, violated_constraints: [], reason: "unsure" })
+    const { intentId, sessionId } = await makeIntent({ max_amount: 8000, max_quantity: 1, allowed_categories: ["headphones"] })
+
+    const cart = await proposeCart(intentId, [{ sku: "HP-004", quantity: 1 }]) // ₹7,499
+    const stepUp = await requestCheckout(intentId, cart.cartId)
+    expect(stepUp.decision).toBe("STEP_UP")
+    expect(stepUp.authorization_id).not.toBeNull()
+
+    // The STEP_UP's parent session dies after the fact (expiry or deactivation
+    // — either way requireActiveSession must reject it).
+    await prisma.session.update({ where: { id: sessionId }, data: { expiresAt: new Date(Date.now() - 1000) } })
+
+    await expect(approveStepUp(stepUp.authorization_id!)).rejects.toThrow(ApprovalError)
+    await expect(approveStepUp(stepUp.authorization_id!)).rejects.toMatchObject({
+      code: "AUTHORIZATION_NOT_APPROVABLE",
+    })
+    expect(createOrderMock).not.toHaveBeenCalled()
+
+    const auth = await prisma.authorizationDecision.findUnique({ where: { id: stepUp.authorization_id! } })
+    expect(auth?.status).not.toBe("APPROVED")
+    expect(auth?.status).toBe("STEP_UP") // untouched — rejection happens before the APPROVED write
+
+    expect(await prisma.razorpayOrder.count({ where: { intentId } })).toBe(0)
+  })
+
+  it("C2: approveStepUp rejects a STEP_UP whose parent session was deactivated (status != ACTIVE)", async () => {
+    judgeCartMock.mockResolvedValue({ match: true, confidence: 0.6, violated_constraints: [], reason: "unsure" })
+    const { intentId, sessionId } = await makeIntent({ max_amount: 8000, max_quantity: 1, allowed_categories: ["headphones"] })
+
+    const cart = await proposeCart(intentId, [{ sku: "HP-004", quantity: 1 }])
+    const stepUp = await requestCheckout(intentId, cart.cartId)
+    expect(stepUp.decision).toBe("STEP_UP")
+
+    await prisma.session.update({ where: { id: sessionId }, data: { status: "REVOKED" } })
+
+    await expect(approveStepUp(stepUp.authorization_id!)).rejects.toMatchObject({
+      code: "AUTHORIZATION_NOT_APPROVABLE",
+    })
+    expect(createOrderMock).not.toHaveBeenCalled()
+    expect(await prisma.razorpayOrder.count({ where: { intentId } })).toBe(0)
+  })
+
   // ---- C1 (finding F5): CONCURRENT single-use enforcement ----
   //
   // HONESTY NOTE — read before trusting these two tests. They fire the calls
