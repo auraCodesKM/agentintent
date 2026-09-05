@@ -80,7 +80,56 @@ Phases P0–P15 all have code + tests. 56/56 Vitest, tsc clean, `next build` gre
 - 2026-09-05 Fable: KNOWN LIMITATION (pre-existing, accepted): Razorpay API failure after replay-key reservation leaves that intent+cart unretryable (key held, no order). Frequency ~0 in test mode; fix would need reservation rollback on RazorpayApiError — deferred, do not fix without proposal.
 - 2026-09-05 Fable: Neon deploy prep executed per approved variant — `scripts/gen_pg_schema.ts` derives `prisma/schema.postgresql.prisma` (gitignore the generated file? NO — commit it so Vercel builds without a gen step, but regenerate via `npm run db:gen-pg` after any schema change).
 
-## Sonnet task queue (Fable delegates; Fable verifies before merge)
+## BUILDER QUEUE v2 (written by Fable/principal — execute in the subscription window)
+
+Protocol: work strictly in order (B1 blocks nothing but is highest risk-value; B2-B5 independent). Per task: run `npm run typecheck && npm test` before AND after; one commit per task ending with the session trailer already used in git log; append an evidence entry to the Decisions log (author tag: Builder). NEVER touch: layer ordering in decide.ts, judge/policy semantics, src/razorpay/* API surface, eval ground truth. Do NOT rerun the 240-case eval. Money-path invariant grep before finishing: `grep -rn "createOrder" src/ app/ --include="*.ts" | grep -v razorpay/orders | grep -v test` → must show only decide.ts.
+
+### B1 — Close single-use gap in approveStepUp (money path, highest priority)
+- **Objective**: a CONSUMED intent must not be approvable. Today two different-cart STEP_UPs on one intent can BOTH be approved → two orders from a single-use intent.
+- **Inspect**: src/gateway/decide.ts approveStepUp (~line 172-250), src/gateway/session.ts getIntentStatus, tests/decide.test.ts, tests/idempotency.test.ts.
+- **Implement**: in approveStepUp, after the auth-status check and BEFORE creating anything: if `getIntentStatus(intent.intent_id) === "CONSUMED"` AND no existing order matches this authorization's replay key (preserve idempotent re-approve of the SAME authorization that already produced an order — the existingOrder check must stay reachable), throw `ApprovalError("AUTHORIZATION_NOT_APPROVABLE")`. Also mark the losing AuthorizationDecision row status "REJECTED" so the UI stops offering approve.
+- **Constraints**: fail closed; no new reason codes unless schemas.ts union already has a fit; do not reorder existing checks except inserting this one; ApprovalError codes are already mapped in app/api/checkout/approve/route.ts (409) — keep mapping.
+- **Verify**: new Vitest (mock Razorpay+judge as decide.test.ts does): intent → two different carts → two STEP_UPs → approve #1 → ALLOW+order; approve #2 → throws AUTHORIZATION_NOT_APPROVABLE, createOrder called exactly once, second auth row status REJECTED. Also: re-approve of auth #1 returns the SAME order id (idempotent). All existing tests green.
+- **Evidence to record**: test names + counts, one-line diff summary, confirmation createOrder call-count assertion passed.
+
+### B2 — Scripted webhook-failure recovery demo (demo credibility; zero human dependency)
+- **Objective**: one command that DEMONSTRATES (not narrates) webhook death → API-poll recovery, against the REAL paid order `order_TYFPRIpLLJeFpf` (payment `pay_TYFtu8vjA3C0iT`, captured, human-verified).
+- **Inspect**: scripts/webhook_route_smoke.ts (signing pattern), src/reconciliation/reconcile.ts, app/api/webhooks/razorpay/route.ts, src/audit/logger.ts.
+- **Implement**: `scripts/webhook_failure_demo.ts` (+ npm script `demo:webhook-fail`): (1) POST a correctly-signed synthetic payment.captured webhook for that order to the local route while env `WEBHOOK_FORCE_FAIL=true` is set FOR THE SERVER — since the script can't set the server's env, instead print an instruction + verify the 500 response IF the server has it set, and otherwise SKIP gracefully with a clear message (never fake a 500); (2) call POST /api/orders/order_TYFPRIpLLJeFpf/reconcile; (3) print recovered payments, assert the payment id equals pay_TYFtu8vjA3C0iT and status captured, assert exactly ONE RazorpayOrder row exists for the order, print the audit tail (WEBHOOK_TIMEOUT_RECONCILED present). Requires dev server running + .env — document that in the script header.
+- **Constraints**: script must create ZERO orders (reconcile only observes); no writes to Razorpay; real ids only.
+- **Verify**: run it twice with server up (`WEBHOOK_FORCE_FAIL=true` in .env, restart server) — second run must be idempotent (payment row upserted, still one order row). Paste script output into Decisions log.
+- **Evidence**: full command transcript (trim secrets), audit lines shown.
+- **HUMAN follow-up (flag for Kavin)**: watch the run once and confirm output matches Dashboard.
+
+### B3 — Deploy readiness (config only; do NOT deploy)
+- **Objective**: repo deploys to Vercel+Neon with zero code edits on the day.
+- **Decision already made (do not revisit)**: Neon gets `prisma db push --schema prisma/schema.postgresql.prisma` (existing migrations are sqlite-dialect and MUST NOT be applied to postgres). Generated pg schema is committed; regenerate via `npm run db:gen-pg` after any schema change.
+- **Inspect**: package.json scripts, next.config.ts, prisma/schema.postgresql.prisma, .env.example.
+- **Implement**: (1) npm script `db:push-pg": "prisma db push --schema prisma/schema.postgresql.prisma"`; (2) fix `db:migrate` doc-string confusion — it targets sqlite dev only; (3) `.env.example`: update GEMINI_MODEL/GEMINI_FALLBACK_MODEL defaults to the lite models actually in use, add `GEMINI_RPM=` (blank, commented "eval pacing, e.g. 13"), add commented `# DATABASE_URL=postgres://... (Neon pooled URL for deploy)`; (4) `docs/DEPLOY.md`: exact Vercel steps (env vars list, build command `next build`, one-time `npm run db:push-pg` + `npm run seed` against Neon, webhook URL to register afterwards `https://<app>.vercel.app/api/webhooks/razorpay`). No vercel.json unless something actually requires it — check `next build` output first; note the finding.
+- **Constraints**: no provider switch of the dev schema; SQLite dev flow untouched.
+- **Verify**: `npm run typecheck && npm test && npx next build` green; `npm run db:gen-pg` idempotent (git diff clean after rerun).
+- **Evidence**: DEPLOY.md path, build output tail, confirmation dev.db flow still works (`npm run seed` output line).
+- **HUMAN follow-up**: create Neon project + link Vercel + set envs, then tell either window to execute DEPLOY.md.
+
+### B4 — Demo page presentability pass (judge impression; behavior frozen)
+- **Objective**: /demo and /checkout/[orderId] look intentional on camera without changing ANY behavior, endpoint, or state logic.
+- **Inspect**: app/demo/page.tsx, app/checkout/[orderId]/page.tsx, docs/DEMO_SCRIPT.md (camera shots it promises).
+- **Implement**: inline-style/CSS-only improvements: consistent spacing scale, readable font sizes, pipeline lights sized for screen recording, decision banner (big ALLOW green / STEP_UP amber / BLOCK red with reason codes prominent), order-id row copyable (monospace + user-select), eval table zebra rows. No new dependencies, no component libraries, no dark mode, no animations beyond none.
+- **Constraints**: zero changes to fetch logic, state machine, or JSX conditional structure (styling attributes only; wrapping divs allowed); `next build` must stay green; page must still render every honest empty-state (NOT CREATED, NOT RUN).
+- **Verify**: `npm run typecheck && npx next build`; manual: dev server, run one BLOCK flow (₹13,999 request) and screenshot — attach nothing, just record in Decisions log that empty/error states render.
+- **Evidence**: one-paragraph before/after description + confirmation of unchanged behavior (diff shows styles only).
+- **HUMAN follow-up**: eyeball /demo before recording video.
+
+### B5 — Public-repo hygiene
+- **Objective**: repo safe + presentable for public GitHub push.
+- **Implement**: (1) MIT `LICENSE` (holder: Kavin Thakur, 2026); (2) README Limitations section: add bullet — approve endpoint is deliberately unauthenticated (single-merchant demo; production would bind it to merchant auth/session), and bullet for the recorded replay-reservation wart (see Decisions log 2026-09-05 KNOWN LIMITATION); (3) confirm `data/eval_results_full_run1.json` contains no secrets (it doesn't — verify anyway); (4) final history sweep: `git log --all --stat | grep -E "\.env$|dev\.db"` must be empty; `git grep -I "rzp_test_" -- ':!*.md'` must show no literal key values (pattern-prefix mentions in code/docs are fine — only flag a full 23-char key).
+- **Verify/Evidence**: paste sweep command outputs (empty) into Decisions log.
+- **HUMAN follow-up**: create GitHub repo, push, confirm Settings→visibility.
+
+### Builder reporting format (append per task to Decisions log)
+`2026-09-05 Builder Bn: <what changed> | tests: <n passed> | invariant grep: clean | evidence: <ids/output lines>`
+
+## Sonnet task queue v1 — COMPLETE (all 5 verified by Fable; kept for history)
 
 Work these in order. Rules: run `npx vitest run` + `npx tsc --noEmit` before and after; commit per task with clear message; append what you did to Decisions log; DO NOT touch `src/gateway/decide.ts`, `src/razorpay/*`, or judge/policy semantics without a written proposal here.
 
