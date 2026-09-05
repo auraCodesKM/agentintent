@@ -52,7 +52,7 @@ Total runtime target: **5:00**. Timing budget sums to 5:00 exactly; treat each b
 **CLICK:** Open `/checkout/<order_id>`, click **Pay (Test Mode)**, complete the Razorpay Checkout popup with UPI `success@razorpay`.
 
 **SAY:**
-> "This exact flow produced a real captured payment: `pay_TYFtu8vjA3C0iT` against order `order_TYFPRIpLLJeFpf`, ₹7,499, verified by a human end to end."
+> "This exact flow produced a real captured payment: `pay_TYFtu8vjA3C0iT` against order `order_TYFPRIpLlJeFpf`, ₹7,499, verified by a human end to end."
 
 **CAMERA MUST SHOW:** the `/checkout` page's post-payment result line (`Verified. payment_id=... status=captured`), and — if time allows — the same payment visible on the Dashboard Orders page.
 
@@ -152,6 +152,6 @@ Total runtime target: **5:00**. Timing budget sums to 5:00 exactly; treat each b
 ## Artifacts referenced in this script (all from HANDOFF.md — none invented)
 
 - Real order (e2e ALLOW): `order_TY5hXZ5ygDvkdO`
-- Real captured payment: `pay_TYFtu8vjA3C0iT` for `order_TYFPRIpLLJeFpf`, ₹7,499, via `/checkout` + UPI `success@razorpay`
+- Real captured payment: `pay_TYFtu8vjA3C0iT` for `order_TYFPRIpLlJeFpf`, ₹7,499, via `/checkout` + UPI `success@razorpay`
 - STEP_UP → approve chain: intent `int_xPYdW5_CoRiN` → `SEMANTIC_LOW_CONFIDENCE` (confidence 0.65) → authorization `auth_ec5teAng2qwI` → approved → `order_TY6lxvhsKkcaME`
 - Eval: 240/240 cases generated, held-out split (120 cases) 100% accuracy / 100% policy / 100% semantic / 0 false blocks (₹0) / 0 unauthorized allows / 2.5% step-up rate, run `2026-09-04T21:23Z`, judge model `gemini-3.5-flash-lite`

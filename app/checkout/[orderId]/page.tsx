@@ -77,28 +77,46 @@ export default function CheckoutPage({ params }: { params: Promise<{ orderId: st
   }
 
   return (
-    <main style={{ fontFamily: "monospace", padding: 24 }}>
-      <h1>AgentIntent — Test Mode Checkout</h1>
+    <main style={{ fontFamily: "ui-monospace, monospace", padding: "32px 24px 64px", maxWidth: 640, margin: "0 auto", lineHeight: 1.5 }}>
+      <h1 style={{ fontSize: 20, margin: "0 0 20px" }}>AgentIntent — Test Mode Checkout</h1>
       {order ? (
         <>
-          <p>
-            Order: <b>{order.razorpay_order_id}</b> · ₹{(order.amount_paise / 100).toLocaleString("en-IN")} ·
-            status: {order.status}
-          </p>
-          {order.payment && (
-            <p>
-              Payment: <b>{order.payment.razorpay_payment_id}</b> · {order.payment.status}
+          <div style={{ padding: "14px 18px", borderRadius: 8, border: "1px solid #e5e7eb", background: "#f9fafb", marginBottom: 16 }}>
+            <p style={{ margin: 0 }}>
+              Order: <b style={{ userSelect: "all", cursor: "text" }}>{order.razorpay_order_id}</b> · ₹
+              {(order.amount_paise / 100).toLocaleString("en-IN")} · status: {order.status}
             </p>
-          )}
-          <button onClick={pay} disabled={!scriptReady} style={{ padding: "8px 16px", fontSize: 16 }}>
+            {order.payment && (
+              <p style={{ margin: "8px 0 0" }}>
+                Payment: <b style={{ userSelect: "all", cursor: "text" }}>{order.payment.razorpay_payment_id}</b> ·{" "}
+                {order.payment.status}
+              </p>
+            )}
+          </div>
+          <button
+            onClick={pay}
+            disabled={!scriptReady}
+            style={{
+              padding: "10px 20px",
+              fontSize: 15,
+              borderRadius: 6,
+              border: "1px solid #111827",
+              background: scriptReady ? "#111827" : "#9ca3af",
+              color: "white",
+              fontFamily: "inherit",
+              cursor: scriptReady ? "pointer" : "default",
+            }}
+          >
             {scriptReady ? "Pay (Test Mode)" : "Loading checkout..."}
           </button>
-          <p>Test UPI: success@razorpay (success) / failure@razorpay (failure)</p>
+          <p style={{ color: "#6b7280", marginTop: 12 }}>
+            Test UPI: <code>success@razorpay</code> (success) / <code>failure@razorpay</code> (failure)
+          </p>
         </>
       ) : (
         <p>Loading order...</p>
       )}
-      {result && <p>{result}</p>}
+      {result && <p style={{ marginTop: 16 }}>{result}</p>}
     </main>
   )
 }
