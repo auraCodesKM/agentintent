@@ -15,6 +15,7 @@
     "eval:run": "tsx scripts/run_eval.ts",
     "db:migrate": "prisma migrate deploy",
     "db:gen-pg": "tsx scripts/gen_pg_schema.ts",
+    "db:push-pg": "prisma db push --schema prisma/schema.postgresql.prisma",
     "demo:webhook-fail": "tsx scripts/webhook_failure_demo.ts"
   },
   "dependencies": {

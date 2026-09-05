@@ -198,7 +198,10 @@ npm run smoke:e2e           # costs ~10 Gemini calls + 1 real order
 npm run eval:run            # ~160 judge calls, ZERO orders, ~13 min at 13 RPM
 ```
 
-`npm run` scripts (package.json): `seed`, `smoke:order`, `smoke:e2e`, `eval:gen`, `eval:run`, `db:migrate` (`prisma migrate deploy`) — all map to existing `scripts/*.ts`.
+`npm run` scripts (package.json): `seed`, `smoke:order`, `smoke:e2e`, `eval:gen`, `eval:run`, `demo:webhook-fail` map to `scripts/*.ts`. Three DB scripts are raw Prisma CLI commands, not scripts/ files, and target different environments — do not mix them up:
+- `db:migrate` (`prisma migrate deploy`) — **sqlite dev only**, applies the existing sqlite-dialect migrations in `prisma/migrations/`. Never point this at Postgres/Neon.
+- `db:gen-pg` (`tsx scripts/gen_pg_schema.ts`) — regenerates `prisma/schema.postgresql.prisma` from `prisma/schema.prisma`, swapping only the provider line. Run after any model change; commit the result.
+- `db:push-pg` (`prisma db push --schema prisma/schema.postgresql.prisma`) — **Neon/Postgres deploy only**, pushes the current schema shape directly (no migration history — the sqlite migrations don't apply to Postgres). See `docs/DEPLOY.md`.
 
 ## Next work queue (in order)
 
