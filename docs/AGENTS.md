@@ -10,11 +10,11 @@ Only ONE coding agent modifies implementation files at a time. Check `git log`/`
 
 ## Current State
 
-Feature-complete for the Buildathon submission. Phases P0–P15 implemented; queue v2 (B1–B5) complete and reviewed; queue v3 in progress (C1 accepted). **61/61 Vitest**, `tsc --noEmit` clean, money-path invariant intact (one `createOrder` call, `src/gateway/decide.ts:369`), secret sweeps clean, MIT LICENSE present. Single-use intents are now enforced by an atomic claim rather than a read-then-write. Remaining agent work: C2 then C3; everything after that is human-only (Neon/Vercel provisioning, webhook registration, video, GitHub push).
+Feature-complete for the Buildathon submission. Phases P0–P15 implemented; queue v2 (B1–B5) complete and reviewed; queue v3 in progress (C1 accepted, C2 complete awaiting review). **63/63 Vitest**, `tsc --noEmit` clean, money-path invariant intact (one `createOrder` call, `src/gateway/decide.ts:390`), secret sweeps clean, MIT LICENSE present. Single-use intents are enforced by an atomic claim; `approveStepUp` now revalidates its parent session before approving, matching `requestCheckout`'s L1 guarantee. Remaining agent work: opus-think reviews C2, then C3; everything after that is human-only (Neon/Vercel provisioning, webhook registration, video, GitHub push).
 
 ## Active Agent
 
-**sonnetCode** — C2 is unblocked and assigned (see `HANDOFF.md`). opusCode has stopped after C1; it must not re-enter the repo while sonnetCode holds C2.
+None holding the repo. sonnetCode finished C2 (`f290097`) and stopped as instructed — did not start C3, did not invoke agy. Awaiting opus-think's review of C2 before C3 is unblocked.
 
 ## Completed Work
 
@@ -26,6 +26,7 @@ Feature-complete for the Buildathon submission. Phases P0–P15 implemented; que
 | B4 | Demo presentability pass (styles only) | builder | `1dd5aa5` | [COMPLETE] accepted (see Verification) |
 | B5 | Public-repo hygiene (LICENSE, limitations, sweeps) | builder | `6c42c76` | [COMPLETE] accepted |
 | C1 | Atomic single-use intent claim (F5, money-path concurrency) | opusCode | `a6f673a` | [COMPLETE] opus-think ACCEPTED (regression independently re-verified) |
+| C2 | Revalidate parent session in `approveStepUp` (F6) | sonnetCode | `f290097` | [REVIEW] awaiting opus-think |
 
 Earlier: judge confidence calibration `0427fe7`; TOCTOU + single-use intent fix (Opus, verified by Fable); derived Postgres schema `af2d01a`.
 
@@ -34,11 +35,11 @@ Earlier: judge confidence calibration `0427fe7`; TOCTOU + single-use intent fix 
 **Builder queue v3 active** (`HANDOFF.md`), from agy findings F4–F7. Strictly serial, one coding agent at a time:
 
 - **[COMPLETE] C1 — atomic single-use intent claim (F5)** · owner: opusCode · `a6f673a` · **ACCEPTED by opus-think** after independent diff review, re-run verification, and a stash-and-run confirmation that both new tests fail against pre-C1 source
-- **[ACTIVE] C2 — revalidate parent session in `approveStepUp` (F6)** · owner: **sonnetCode** · unblocked 2026-09-05
-- **[BLOCKED on C2] C3 — deployment-safe Prisma generation (F4) + stale command (F7)** · owner: sonnetCode
-- **[QUEUED] agy re-audit of C1–C3** — QA only
+- **[REVIEW] C2 — revalidate parent session in `approveStepUp` (F6)** · owner: sonnetCode · `f290097` · implementation complete, tests passing, invariants verified by the builder; awaiting opus-think's independent review (same pattern as C1)
+- **[BLOCKED] C3 — deployment-safe Prisma generation (F4) + stale command (F7)** · owner: sonnetCode · blocked until opus-think reviews C2, per the strictly-serial protocol
+- **[QUEUED] agy re-audit of C1–C3** — QA only, not yet requested
 
-C1 and C2 both edit `src/gateway/decide.ts`. C1 is done and accepted, so C2 may proceed — but C3 must not start until C2 is committed and reviewed.
+C1 and C2 both edit `src/gateway/decide.ts`. C1 is done and accepted. C2 is done and self-verified by sonnetCode but not yet independently reviewed — treat as REVIEW, not ACCEPTED, until opus-think signs off (same evidentiary bar C1 was held to).
 
 ## Important Decisions
 
@@ -72,8 +73,8 @@ Canonical DB-verified ids for the real captured payment: **`order_TYFPRIpLlJeFpf
 `getIntentStatus()` is a plain read; `markIntentConsumed()` is an unconditional `update` that runs **after** `createOrder` returns. The read-to-write window therefore spans a network round trip to Razorpay. Two concurrent approvals for two *different* carts on one ACTIVE intent both observe ACTIVE, compute *different* replay keys (so both reservations succeed), and both reach `createOrder` → **two real Orders from a single-use intent.** The B1 fix (F1) closed only the *sequential* case; its passing test is not coverage for this. Amplified by D3 (the approve endpoint is unauthenticated). Fix direction decided: atomic conditional transition (`updateMany` with `status: "ACTIVE"` in the `WHERE`) performed **before** `createOrder`, in `executeAllow` — the single point both `requestCheckout` and `approveStepUp` funnel through. A check-before-write fix is explicitly not acceptable.
 *Fix as landed (commit `a6f673a`):* `claimIntent()` in `src/gateway/session.ts` performs `updateMany({ where: { id, status: "ACTIVE" }, data: { status: "CONSUMED" } })` and returns `count === 1`; `executeAllow` calls it as its first statement — before the authorization row, before `createOrder`. The loser returns an audited `BLOCK`/`REPLAY_DETECTED`, never a throw. The old unconditional `markIntentConsumed` was **deleted rather than left in place**: an unconditional update cannot distinguish a winner from a loser, so leaving it available would invite the bug back. A bounded compensating revert (`releaseIntentClaim`, CONSUMED → ACTIVE, only when the intent has zero `razorpayOrder` rows) runs in the `RazorpayApiError` branch so a failed Razorpay call does not strand the intent.
 
-**F6 — `approveStepUp` does not revalidate the parent session** · severity: MEDIUM · discovered by: agy · 2026-09-05 · `src/gateway/decide.ts` · **status: CONFIRMED by opus-think, assigned C2 → sonnetCode.**
-`requestCheckout` enforces L1 session status + expiry; `approveStepUp` checks only intent expiry, so a STEP_UP raised under a since-expired or deactivated session can still be approved into a real Order. The function's own docstring claims it "re-runs L1/L2; does not skip checks" — currently false. Approval must not be a weaker door into the money path than the front door.
+**F6 — `approveStepUp` does not revalidate the parent session** · severity: MEDIUM · discovered by: agy · 2026-09-05 · `src/gateway/decide.ts` · **status: FIXED (`f290097`) by sonnetCode, VERIFIED BY TEST — awaiting opus-think independent review.**
+`requestCheckout` enforces L1 session status + expiry; `approveStepUp` checked only intent expiry, so a STEP_UP raised under a since-expired or deactivated session could still be approved into a real Order. The function's own docstring claims it "re-runs L1/L2; does not skip checks" — was false, now true. Fix reuses the existing `requireActiveSession()` helper (no duplicated logic), placed after the intent+cart lookup and before both the intent-expiry check and the `APPROVED` status write. Two new tests force a session expired / deactivated after a STEP_UP is raised and assert: `ApprovalError("AUTHORIZATION_NOT_APPROVABLE")` thrown, `createOrder` never called, the authorization row stays `STEP_UP` (never reaches `APPROVED`), zero `RazorpayOrder` rows. 63/63 total. Did not touch C1's claim (`claimIntent` still the first statement of `executeAllow`, one call site; `markIntentConsumed` not reintroduced). Route mapping unchanged and already correct — `AUTHORIZATION_NOT_APPROVABLE` → 409 in `app/api/checkout/approve/route.ts`, verified by reading the route, not by a new HTTP-level test (this repo has no HTTP test harness; same verification style B1 used for its `ApprovalError` mapping claim).
 
 **F7 — Stale deploy command printed by `gen_pg_schema.ts`** · severity: LOW · discovered by: agy · 2026-09-05 · `scripts/gen_pg_schema.ts` (~line 20) · **status: CONFIRMED, bundled into C3.**
 Prints `prisma migrate deploy` as the deploy usage, contradicting the decided Neon strategy (`prisma db push`). Wrong instruction surfaced at exactly the moment someone is deploying — the SQLite-dialect migrations must never run against Postgres.
@@ -106,6 +107,7 @@ Independently re-run by opus-think after B5 (2026-09-05), not taken on the build
 - **B4 is styles-only — VERIFIED BY CODE INSPECTION**, not by claim: the diff over `app/` contains no `fetch`, `useState`/`useEffect`, `await`, setter, or JSX-conditional lines.
 - **Evaluation: 240/240 (100%)** on dev / validation / held-out (run 2026-09-04T21:23Z, `gemini-3.5-flash-lite`, 165 judge calls, **0 Razorpay calls**). Held-out: policy 100%, semantic 100%, false blocks 0 (₹0 GMV), unauthorized allows 0, step-up 2.5% (class H, correctly escalated), latency mean 9.6s / p95 14.4s — **these include 13-RPM pacing waits and must always be quoted with that caveat.** Do not rerun without a concrete reason (~13 min, ~160 quota units).
 - **Razorpay reality — VERIFIED MANUALLY by the human:** captured payment `pay_TYFtu8vjA3C0iT` for `order_TYFPRIpLlJeFpf` (₹7,499) through `/demo` Test Mode checkout. Webhook route live-tested: 400 bad signature / 200 valid / duplicate no-op. Webhook-death → reconcile recovery run twice (idempotent, zero orders created).
+- **C2 session-revalidation regression — 63/63 tests, self-reported by sonnetCode, not yet independently re-verified by opus-think** (flagging the distinction per the CLAIMED vs VERIFIED protocol — treat as VERIFIED BY TEST from the builder's own run until opus-think re-runs it). Two new tests in `tests/decide.test.ts` (`C2: ... session has since expired` / `C2: ... session was deactivated`) force the parent session invalid *after* a STEP_UP is raised, then call `approveStepUp`: both assert `ApprovalError("AUTHORIZATION_NOT_APPROVABLE")` thrown, `createOrder` called **zero** times, the authorization row remains `STEP_UP` (confirms the check runs before the `APPROVED` write), and zero `RazorpayOrder` rows exist. The existing C1 concurrency tests and `tests/idempotency.test.ts` were re-run in the same pass and still pass — they build fresh, active sessions via `createSession()`, so the stricter check doesn't collide with them. Money-path grep still returns exactly one real `createOrder` call (`decide.ts:390`); `claimIntent` still exactly one call site (`decide.ts:354`), still the first statement of `executeAllow`; `markIntentConsumed` still zero occurrences.
 
 ## Human Checkpoints
 
@@ -121,9 +123,9 @@ Only the human (Kavin) can complete these. None may be marked complete by an age
 
 ## Next Recommended Action
 
-**opus-think reviews C1** (`a6f673a`), then unblocks C2 → sonnetCode. Review focus: that the claim is genuinely the first statement in `executeAllow` and cannot be bypassed by either caller; that the compensating revert cannot un-consume an intent that has a real order; and that the loser's `BLOCK` is audited rather than thrown. F4 is CRITICAL but blocks nothing until Neon is provisioned by the human; F6/F7 are cheap and follow.
+**opus-think reviews C2** (`f290097`), then unblocks C3 → sonnetCode. Review focus: that `requireActiveSession` is reused rather than duplicated; that the placement genuinely precedes both the reservation work and the `APPROVED` status write (not just claimed to); that C1's claim (`claimIntent`, first statement of `executeAllow`, one call site) is untouched; and that the two new tests would actually fail if the check were deleted (i.e. they test the guard, not just exercise the code path). F4 is CRITICAL but blocks nothing until Neon is provisioned by the human; F7 is bundled into C3.
 
-**Submission blockers, in order:** C1 (money-path correctness) → C3 + human Neon/Vercel provisioning (deploy) → human video + GitHub push. C2 is not a blocker but is cheap and closes a real gap.
+**Submission blockers, in order:** ~~C1~~ done → opus-think review of C2 → C3 + human Neon/Vercel provisioning (deploy) → human video + GitHub push.
 
 ---
 

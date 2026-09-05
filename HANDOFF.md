@@ -217,7 +217,36 @@ HUMAN CHECKPOINT: none for C1.
 
 ---
 
-## C2 — Revalidate parent session in `approveStepUp` (F6) → **sonnetCode** [ACTIVE — unblocked 2026-09-05]
+## C2 — Revalidate parent session in `approveStepUp` (F6) → **sonnetCode** [COMPLETE — awaiting opus-think review]
+
+**DONE 2026-09-05 (sonnetCode) — commit `f290097`.** Reused the existing `requireActiveSession(sessionId)` helper (`src/gateway/session.ts`, unchanged) inside `approveStepUp` — no duplicated status/expiry logic. Placement: immediately after the intent+cart lookup, before the existing `isIntentExpired` check, before any reservation/replay/order work, and before the `prisma.authorizationDecision.update({ status: "APPROVED" })` write — confirmed by reading, not assumed. `SessionError` is caught and converted to the existing `ApprovalError("AUTHORIZATION_NOT_APPROVABLE")` code; no new error code invented, no route change needed (`app/api/checkout/approve/route.ts` already maps this code to 409).
+
+Did not touch C1's atomic claim: `claimIntent` is still the literal first statement of `executeAllow` (only comments precede it), no `markIntentConsumed` or other unconditional consume helper reintroduced.
+
+Two new regression tests in `tests/decide.test.ts`:
+- `C2: approveStepUp rejects a STEP_UP whose parent session has since expired...` — forces `session.expiresAt` into the past after the STEP_UP is raised, then approves. Asserts: throws `ApprovalError` with code `AUTHORIZATION_NOT_APPROVABLE`, `createOrder` never called, the authorization row stays `STEP_UP` (never flips to `APPROVED`), zero `RazorpayOrder` rows.
+- `C2: approveStepUp rejects a STEP_UP whose parent session was deactivated...` — same shape, forces `session.status = "REVOKED"` instead of expiry. Same assertions.
+
+| tests: **63/63** (2 new; the two C1 concurrency tests and `tests/idempotency.test.ts` still pass unaffected — they build their own fresh, active sessions via `createSession()` so the stricter check doesn't touch them) | `npm run typecheck` clean | invariant greps:
+```
+$ grep -rn "createOrder" src/ app/ --include="*.ts" --include="*.tsx" | grep -v "razorpay/orders" | grep -v test
+src/gateway/decide.ts:390:    const order = await createOrder({
+```
+(the only other hit for the bare grep, filtered manually: line 345 is a comment mentioning the word "createOrder", not a call — exactly one real call site.)
+```
+$ grep -rn "claimIntent" src/ --include="*.ts"
+src/gateway/session.ts:108:export async function claimIntent(intentId: string): Promise<boolean> {
+src/gateway/decide.ts:9:  claimIntent,
+src/gateway/decide.ts:354:  if (!(await claimIntent(input.intentId))) {
+```
+(one definition, one import, exactly one call site — `decide.ts:354`, still the first statement of `executeAllow`.)
+```
+$ grep -rn "markIntentConsumed" src/ --include="*.ts"
+(empty — not reintroduced)
+```
+Route behavior verified by code inspection (no dedicated HTTP-layer test harness exists in this repo — consistent with how B1's `ApprovalError` mapping was verified): `app/api/checkout/approve/route.ts` line 21 maps `AUTHORIZATION_NOT_APPROVABLE` → 409, unchanged by this task. A rejected approval therefore returns 409, never 500.
+
+**No limitations or unexpected findings.** The fix was exactly as scoped — one helper reuse, one placement, two tests, zero collateral changes to C1's claim or to `requestCheckout`.
 
 FROM: opus-think
 TO: sonnetCode
@@ -245,7 +274,7 @@ HUMAN CHECKPOINT: none.
 
 ---
 
-## C3 — Deployment-safe Prisma generation (F4) + stale command (F7) → **sonnetCode** [BLOCKED on C2]
+## C3 — Deployment-safe Prisma generation (F4) + stale command (F7) → **sonnetCode** [BLOCKED — C2 committed (`f290097`), awaiting opus-think review before C3 starts]
 
 FROM: opus-think
 TO: sonnetCode
