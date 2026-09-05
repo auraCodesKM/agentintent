@@ -25,7 +25,7 @@ Feature-complete for the Buildathon submission. Phases P0–P15 implemented; Bui
 | B3 | Deploy readiness (Neon/Vercel, config only) | builder | `1ee390a` | [COMPLETE] accepted |
 | B4 | Demo presentability pass (styles only) | builder | `1dd5aa5` | [COMPLETE] accepted (see Verification) |
 | B5 | Public-repo hygiene (LICENSE, limitations, sweeps) | builder | `6c42c76` | [COMPLETE] accepted |
-| C1 | Atomic single-use intent claim (F5, money-path concurrency) | opusCode | `b97291f` | [REVIEW] opus-think pending |
+| C1 | Atomic single-use intent claim (F5, money-path concurrency) | opusCode | `a6f673a` | [REVIEW] opus-think pending |
 
 Earlier: judge confidence calibration `0427fe7`; TOCTOU + single-use intent fix (Opus, verified by Fable); derived Postgres schema `af2d01a`.
 
@@ -33,7 +33,7 @@ Earlier: judge confidence calibration `0427fe7`; TOCTOU + single-use intent fix 
 
 **Builder queue v3 active** (`HANDOFF.md`), from agy findings F4–F7. Strictly serial, one coding agent at a time:
 
-- **[REVIEW] C1 — atomic single-use intent claim (F5)** · owner: **opusCode** · money-path concurrency · implemented in `b97291f`, awaiting opus-think acceptance
+- **[REVIEW] C1 — atomic single-use intent claim (F5)** · owner: **opusCode** · money-path concurrency · implemented in `a6f673a`, awaiting opus-think acceptance
 - **[BLOCKED on C1 review] C2 — revalidate parent session in `approveStepUp` (F6)** · owner: sonnetCode
 - **[BLOCKED on C2] C3 — deployment-safe Prisma generation (F4) + stale command (F7)** · owner: sonnetCode
 - **[QUEUED] agy re-audit of C1–C3** — QA only
@@ -68,7 +68,7 @@ Canonical DB-verified ids for the real captured payment: **`order_TYFPRIpLlJeFpf
 **F4 — Vercel/Neon Prisma generation blocker** · severity: CRITICAL (deploy) · discovered by: agy · 2026-09-05 · `package.json`, `docs/DEPLOY.md` · **status: CONFIRMED by opus-think (code inspection), assigned C3 → sonnetCode.**
 `package.json` has no `postinstall` and no `prisma generate` step, and `docs/DEPLOY.md` never mentions one. Vercel falls back to Prisma's own postinstall, which reads the default `prisma/schema.prisma` — provider `sqlite`. The deployed app would run a SQLite client against a `postgres://` `DATABASE_URL` and fail **at runtime, after a green build** — the worst failure shape, because CI looks healthy. Decision: explicit `build:vercel` script (`prisma generate --schema=prisma/schema.postgresql.prisma && next build`) plus a documented Vercel Build Command, rather than a shell-variable trick or an undocumented dashboard override.
 
-**F5 — Cross-cart concurrency TOCTOU on single-use intents** · severity: HIGH (money path) · discovered by: agy · 2026-09-05 · `src/gateway/decide.ts` `executeAllow`, `src/gateway/session.ts` · **status: FIXED (`b97291f`), verified by regression test + code inspection — see Verification Evidence for what the test does and does not prove.**
+**F5 — Cross-cart concurrency TOCTOU on single-use intents** · severity: HIGH (money path) · discovered by: agy · 2026-09-05 · `src/gateway/decide.ts` `executeAllow`, `src/gateway/session.ts` · **status: FIXED (`a6f673a`), verified by regression test + code inspection — see Verification Evidence for what the test does and does not prove.**
 `getIntentStatus()` is a plain read; `markIntentConsumed()` is an unconditional `update` that runs **after** `createOrder` returns. The read-to-write window therefore spans a network round trip to Razorpay. Two concurrent approvals for two *different* carts on one ACTIVE intent both observe ACTIVE, compute *different* replay keys (so both reservations succeed), and both reach `createOrder` → **two real Orders from a single-use intent.** The B1 fix (F1) closed only the *sequential* case; its passing test is not coverage for this. Amplified by D3 (the approve endpoint is unauthenticated). Fix direction decided: atomic conditional transition (`updateMany` with `status: "ACTIVE"` in the `WHERE`) performed **before** `createOrder`, in `executeAllow` — the single point both `requestCheckout` and `approveStepUp` funnel through. A check-before-write fix is explicitly not acceptable.
 *Fix as landed:* `claimIntent()` in `src/gateway/session.ts` performs `updateMany({ where: { id, status: "ACTIVE" }, data: { status: "CONSUMED" } })` and returns `count === 1`; `executeAllow` calls it as its first statement — before the authorization row, before `createOrder`. The loser returns an audited `BLOCK`/`REPLAY_DETECTED`, never a throw. The old unconditional `markIntentConsumed` was **deleted rather than left in place**: an unconditional update cannot distinguish a winner from a loser, so leaving it available would invite the bug back. A bounded compensating revert (`releaseIntentClaim`, CONSUMED → ACTIVE, only when the intent has zero `razorpayOrder` rows) runs in the `RazorpayApiError` branch so a failed Razorpay call does not strand the intent.
 
@@ -118,7 +118,7 @@ Only the human (Kavin) can complete these. None may be marked complete by an age
 
 ## Next Recommended Action
 
-**opus-think reviews C1** (`b97291f`), then unblocks C2 → sonnetCode. Review focus: that the claim is genuinely the first statement in `executeAllow` and cannot be bypassed by either caller; that the compensating revert cannot un-consume an intent that has a real order; and that the loser's `BLOCK` is audited rather than thrown. F4 is CRITICAL but blocks nothing until Neon is provisioned by the human; F6/F7 are cheap and follow.
+**opus-think reviews C1** (`a6f673a`), then unblocks C2 → sonnetCode. Review focus: that the claim is genuinely the first statement in `executeAllow` and cannot be bypassed by either caller; that the compensating revert cannot un-consume an intent that has a real order; and that the loser's `BLOCK` is audited rather than thrown. F4 is CRITICAL but blocks nothing until Neon is provisioned by the human; F6/F7 are cheap and follow.
 
 **Submission blockers, in order:** C1 (money-path correctness) → C3 + human Neon/Vercel provisioning (deploy) → human video + GitHub push. C2 is not a blocker but is cheap and closes a real gap.
 
