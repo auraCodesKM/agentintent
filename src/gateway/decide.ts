@@ -2,9 +2,10 @@
 // L1 session/expiry/merchant/replay → L2 policy → L3 semantic judge → L4 decision.
 
 import { nanoid } from "nanoid"
+import { Prisma } from "@prisma/client"
 import { prisma } from "@/lib/db"
 import { audit } from "@/audit/logger"
-import { getCart, getIntent } from "@/gateway/session"
+import { getCart, getIntent, getIntentStatus, markIntentConsumed } from "@/gateway/session"
 import { makeReplayKey, replayKeyExists, reserveReplayKey } from "@/gateway/replay"
 import { checkPolicy, isIntentExpired, type MerchantPolicy } from "@/policy/engine"
 import { priceCart } from "@/catalog/catalog"
@@ -23,6 +24,14 @@ export interface CheckoutDecision {
   authorization_id: string | null
   razorpay_order_id: string | null
   semantic_confidence: number | null
+}
+
+/**
+ * Prisma unique-constraint violation (P2002). The DB constraint — not the
+ * earlier read — is the real arbiter of who won a concurrent reservation.
+ */
+function isUniqueConstraintViolation(err: unknown): boolean {
+  return err instanceof Prisma.PrismaClientKnownRequestError && err.code === "P2002"
 }
 
 async function getActiveMerchantPolicy(merchantId: string): Promise<MerchantPolicy> {
@@ -75,6 +84,14 @@ export async function requestCheckout(intentId: string, cartId: string): Promise
       razorpay_order_id: existingOrder.razorpayOrderId,
       semantic_confidence: null,
     }
+  }
+
+  // Intents are single-use (product.md state machine: ACTIVE → CONSUMED, and
+  // CONSUMED → ACTIVE is invalid). A consumed intent may not authorize a NEW
+  // cart. Deliberately AFTER the existing-order check above so the idempotent
+  // retry of the SAME intent+cart still returns its order.
+  if ((await getIntentStatus(intentId)) === "CONSUMED") {
+    return await persistDecision(intentId, cartId, "BLOCK", ["REPLAY_DETECTED"], null, intent.session_id)
   }
 
   if (await replayKeyExists(replayKey)) {
@@ -140,7 +157,25 @@ export async function requestCheckout(intentId: string, cartId: string): Promise
   }
 
   // ALLOW: reserve replay, then create the real Order.
-  await reserveReplayKey(replayKey, intentId)
+  // The early replayKeyExists() check above is a fast path, not a lock: a
+  // concurrent identical request can pass it and judge in parallel. The unique
+  // constraint decides; the loser fails closed as an audited replay BLOCK
+  // instead of surfacing a raw P2002.
+  try {
+    await reserveReplayKey(replayKey, intentId)
+  } catch (err) {
+    if (isUniqueConstraintViolation(err)) {
+      return await persistDecision(
+        intentId,
+        cartId,
+        "BLOCK",
+        ["REPLAY_DETECTED"],
+        verdict.confidence,
+        intent.session_id,
+      )
+    }
+    throw err
+  }
   return await executeAllow({
     intentId,
     cartId,
@@ -189,7 +224,23 @@ export async function approveStepUp(authorizationId: string): Promise<CheckoutDe
     }
   }
   if (!(await replayKeyExists(replayKey))) {
-    await reserveReplayKey(replayKey, intent.intent_id)
+    try {
+      await reserveReplayKey(replayKey, intent.intent_id)
+    } catch (err) {
+      // Same TOCTOU as requestCheckout: a concurrent writer reserved between
+      // the check and the insert. Fail closed to an audited replay BLOCK.
+      if (isUniqueConstraintViolation(err)) {
+        return await persistDecision(
+          intent.intent_id,
+          cart.id,
+          "BLOCK",
+          ["REPLAY_DETECTED"],
+          auth.semanticConfidence,
+          intent.session_id,
+        )
+      }
+      throw err
+    }
   }
 
   await prisma.authorizationDecision.update({
@@ -286,6 +337,9 @@ async function executeAllow(input: AllowInput): Promise<CheckoutDecision> {
       sessionId: input.sessionId,
       metadata: { razorpay_order_id: order.razorpayOrderId, amount_paise: order.amountPaise },
     })
+    // Single-use intent: the authorization has now produced a real Order.
+    // Covers both requestCheckout and approveStepUp (both end here).
+    await markIntentConsumed(input.intentId)
     return {
       decision: "ALLOW",
       reason_codes: [],
