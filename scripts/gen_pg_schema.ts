@@ -17,4 +17,5 @@ const header =
 
 writeFileSync("prisma/schema.postgresql.prisma", header + out)
 console.log("written: prisma/schema.postgresql.prisma (provider=postgresql)")
-console.log("deploy usage: prisma migrate deploy --schema prisma/schema.postgresql.prisma")
+console.log("deploy usage: prisma db push --schema prisma/schema.postgresql.prisma")
+console.log("(never `prisma migrate deploy` against Neon — prisma/migrations/ is sqlite-dialect)")

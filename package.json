@@ -5,6 +5,7 @@
   "scripts": {
     "dev": "next dev",
     "build": "next build",
+    "build:vercel": "prisma generate --schema=prisma/schema.postgresql.prisma && next build",
     "start": "next start",
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
