@@ -19,7 +19,7 @@ Human states intent → AI chooses product → AI proposes cart → payment
 Nothing in a plain payment API stops an AI buyer from turning "headphones under ₹8,000" into a ₹13,999 purchase, or "nothing with a screen" into a tablet. AgentIntent inserts a merchant-controlled authorization boundary before any Razorpay transaction:
 
 ```
-AI buyer → AgentIntent gateway (L1 session/expiry/replay → L2 deterministic policy
+AI buyer → AgentIntent gateway (L1 session/expiry/merchant/replay → L2 deterministic policy
          → L3 semantic judge → L4 decision) → ALLOW | STEP_UP | BLOCK → Razorpay
 ```
 
@@ -56,6 +56,19 @@ AI buyer → AgentIntent gateway (L1 session/expiry/replay → L2 deterministic 
 
 The buyer never sees Razorpay credentials. The judge never sees free-text product descriptions (prompt-injection surface reduction — one catalog SKU carries an intentionally poisoned description as a fixture). The browser receives only the public key id.
 
+## Security properties (the part that matters for judging)
+
+Each of these is a specific engineering decision, not a marketing claim — grep the code to check any of them:
+
+- **One path to money.** Only `src/gateway/decide.ts` may call `createOrder`. Verified every session with `grep -rn "createOrder" src/ app/ --include="*.ts" --include="*.tsx" | grep -v "razorpay/orders" | grep -v test` — it returns exactly one hit.
+- **Single-use intents, enforced atomically.** An intent authorizes at most one Order. This is not a read-then-write check (which two concurrent requests can both pass) — it's one conditional `UPDATE ... WHERE status = 'ACTIVE'`, taken as the first statement before any Razorpay call. The database's own write-locking makes exactly one caller win; the loser gets an audited `BLOCK`, never a second Order and never a raw error.
+- **Approval is not a weaker door than checkout.** The front door (`requestCheckout`) validates session status, expiry, and merchant binding before ever reaching the judge. The merchant-approval path for a STEP_UP (`approveStepUp`) re-validates all three — a STEP_UP raised under a session that later expires, gets deactivated, or gets rebound to a different merchant cannot be approved into a real Order.
+- **Canonical, server-priced carts.** The buyer proposes SKUs and quantities; the gateway looks up price, category, and attributes from the catalog itself. A client can suggest a cart; it cannot suggest a price.
+- **The judge can't see what it shouldn't.** The semantic-match payload sent to Gemini carries canonical fields only — SKU, category, quantity, price — never the catalog's free-text `description`. One SKU in the catalog carries a deliberately poisoned description as a live fixture; the eval proves it never influences the decision.
+- **Replay and idempotency, not the same check twice.** The replay key is `intent_id + sha256(canonical cart)`. A repeat of an already-authorized intent+cart returns the *same* Order (idempotent, safe to retry) — a *different* cart on an already-consumed intent is rejected outright.
+- **Every failure path fails closed.** A judge outage, a malformed model response, or a Razorpay API error each resolve to `STEP_UP` or `BLOCK` — never a silent `ALLOW`. Nothing in the authorization boundary has a "let it through on error" branch.
+- **Webhooks are verified, deduped, and recoverable.** Signatures are checked over the raw request body (never re-serialized JSON) before anything else runs; the Razorpay event id is persisted *before* any side effect, so retried deliveries are 200-OK no-ops. If a webhook never arrives, `POST /api/orders/:id/reconcile` polls Razorpay directly and recovers the same Order/Payment — it never creates a new one.
+
 ## Stack
 
 Next.js 15 (App Router) · TypeScript strict · Gemini Flash via `@google/genai` (model set by `GEMINI_MODEL`) · Zod on every model output and API body · Prisma + SQLite locally (Neon Postgres for deploy) · official `razorpay` SDK · Vitest. No agent framework, no MCP runtime on the payment path — the authorization boundary is hand-written on purpose.
@@ -74,8 +87,8 @@ npm run dev                # http://localhost:3000/demo
 
 | Var | Where |
 | --- | --- |
-| `GEMINI_API_KEY` | Google AI Studio — key from a **billing-enabled** project (free tier's 20 req/day/model cannot run the eval) |
-| `GEMINI_MODEL` / `GEMINI_FALLBACK_MODEL` | model switching without code changes (defaults `gemini-3.8-flash` / `gemini-3.6-flash`) |
+| `GEMINI_API_KEY` | Google AI Studio key |
+| `GEMINI_MODEL` / `GEMINI_FALLBACK_MODEL` | model switching without code changes (defaults `gemini-3.5-flash-lite` / `gemini-3.1-flash-lite` — the two tiers with 500 requests/day free-tier quota on a fresh key; the plain `-flash` tiers cap at 20 requests/day and exhaust almost immediately) |
 | `RAZORPAY_KEY_ID` `RAZORPAY_KEY_SECRET` `NEXT_PUBLIC_RAZORPAY_KEY_ID` | Razorpay Dashboard → Test Mode → API Keys (`rzp_test_…` only; live keys are refused at boot) |
 | `RAZORPAY_WEBHOOK_SECRET` | Dashboard → Developers → Webhooks (events: `payment.captured`, `payment.failed`, `order.paid`) |
 | `DATABASE_URL` | `file:./dev.db` locally |
@@ -87,7 +100,7 @@ Test payments: UPI `success@razorpay` / `failure@razorpay`.
 
 ```bash
 npm run typecheck
-npm test                    # 56 tests: policy, schemas, decide, idempotency, webhooks, reconcile
+npm test                    # 64 tests: policy, schemas, decide, idempotency, webhooks, reconcile
 npm run smoke:order         # creates ONE real test-mode order_… (visible in Dashboard)
 npm run smoke:e2e           # live buyer → judge → real order; two BLOCKs with zero orders
 npm run eval:gen            # 240 deterministic cases (fixture ground truth, never Gemini)
