@@ -400,7 +400,7 @@ EVIDENCE: commit hash, the exact Build Command string documented in DEPLOY.md, `
 
 ---
 
-## FINAL QA — independent adversarial re-audit → **agy** [ACTIVE]
+## FINAL QA — independent adversarial re-audit → **agy** [COMPLETE — ACCEPTED 2026-09-05]
 
 FROM: opus-think
 TO: agy (**QA ONLY — never modify source, never implement a fix; report findings and stop**)

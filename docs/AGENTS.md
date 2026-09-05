@@ -29,22 +29,14 @@ None holding the repo. sonnetCode implemented C4 (`f6c2c50`) and stopped as inst
 | C2 | Revalidate parent session status+expiry in `approveStepUp` (F6) | sonnetCode | `f290097` | [COMPLETE] opus-think ACCEPTED; follow-up F9 → C2b |
 | C2b | Revalidate merchant binding in `approveStepUp` (F9) | sonnetCode | `dd54bce` | [COMPLETE] opus-think ACCEPTED `8d7cdd7` (regression independently re-verified against pre-C2b source) |
 | C3 | Deployment-safe Prisma generation (F4) + stale command (F7) | sonnetCode | `c52c610` | [COMPLETE] opus-think ACCEPTED `50fdbfd`; review raised F12 → C4 |
-| C4 | Pin Vercel build command via `vercel.json` (F12) | sonnetCode | `f6c2c50` | [REVIEW] awaiting opus-think — commit verified present via `git log`/`git show` before this report |
+| C4 | Pin Vercel build command via `vercel.json` (F12) | sonnetCode | `f6c2c50` | [COMPLETE] opus-think ACCEPTED `b325e8a` |
+| FINAL QA | Independent adversarial re-audit of C1–C4 & repo honesty | agy | — | [COMPLETE] FINAL QA ACCEPTED — all 7 core invariants verified |
 
 Earlier: judge confidence calibration `0427fe7`; TOCTOU + single-use intent fix (Opus, verified by Fable); derived Postgres schema `af2d01a`.
 
 ## Current Task
 
-**Builder queue v3** (`HANDOFF.md`), from agy findings F4–F7 (+ F9 from C2 review, F12 from C3 review) — agent-side work now complete pending one review:
-
-- **[COMPLETE] C1 — atomic single-use intent claim (F5)** · owner: opusCode · `a6f673a` · **ACCEPTED by opus-think**
-- **[COMPLETE] C2 — revalidate parent session status+expiry in `approveStepUp` (F6)** · owner: sonnetCode · `f290097` · **ACCEPTED by opus-think**; the review raised F9 → C2b
-- **[COMPLETE] C2b — revalidate merchant binding in `approveStepUp` (F9)** · owner: sonnetCode · `dd54bce` · **ACCEPTED by opus-think** (`8d7cdd7`) after independent diff review and a revert-and-run confirmation that the new test fails against pre-C2b source
-- **[COMPLETE] C3 — deployment-safe Prisma generation (F4) + stale command (F7)** · owner: sonnetCode · `c52c610` · **ACCEPTED by opus-think** (`50fdbfd`) after re-running `prisma generate` directly and confirming the Postgres schema line; the review raised F12 → C4
-- **[REVIEW] C4 — pin the Vercel build command in `vercel.json` (F12)** · owner: sonnetCode · `f6c2c50` · implementation complete, `vercel.json` valid JSON with exactly one key, 64/64 tests unaffected, diff confined to `vercel.json` + `docs/DEPLOY.md`; awaiting opus-think's independent review
-- **[QUEUED] agy final re-audit of C1–C4** — QA only, starts once C4 is reviewed
-
-Serial order: **C4 review → agy final QA → submission.** C4 touched only `vercel.json` (new) and `docs/DEPLOY.md` — no `src/`, no `package.json` (per explicit constraint, `build:vercel` itself was not edited); C1/C2/C2b/C3 unaffected by construction.
+**All agent-executable work is COMPLETE.** Queue v3 (C1–C4) and independent FINAL QA (agy) are fully accepted. Remaining path to submission is strictly [HUMAN] checkpoints (Neon/Vercel deploy, Dashboard check, video recording, public push).
 
 ## Important Decisions
 
@@ -112,8 +104,13 @@ C3 correctly adds `build:vercel` and documented that Vercel's Build Command must
 
 **D3 — Approve endpoint is unauthenticated** · `POST /api/checkout/approve` has no merchant auth — deliberate for a single-merchant demo; production would bind it to a merchant session. Documented in README Limitations rather than hidden.
 
-## Verification Evidence
-
+- **FINAL QA INDEPENDENT AUDIT (agy, 2026-09-05) — VERIFIED BY TEST & CODE INSPECTION: ACCEPTED.**
+  - **Seven Core Invariants**: All verified intact. Only `src/gateway/decide.ts:397` reaches `createOrder`. BLOCK produces zero Razorpay objects. STEP_UP requires approval and cannot mint duplicate orders. Replay, expiry, and merchant binding fully enforced on both paths. Webhook deduplication precedes side effects; reconcile never creates orders. Gemini never receives Razorpay credentials, cannot authorize money, and never sees catalog descriptions. Failure paths fail closed.
+  - **C1 Atomic Claim**: `claimIntent` atomically executes `updateMany` (status "ACTIVE" -> "CONSUMED"). Compensating release in `RazorpayApiError` strictly verifies `razorpayOrder.count === 0`, ensuring no order can ever be un-consumed. Concurrent regressions (`C1:`) pass; `createOrder` called exactly once across interleaved requests.
+  - **C2 & C2b Full L1 Equivalence**: `approveStepUp` validates `requireActiveSession` (active status + expiry) and `session.merchantId === intent.merchant_id` before the `APPROVED` write and before order creation. Regressions (`C2:`, `C2b:`) pass.
+  - **C3 & C4 Deployment Readiness**: `package.json` contains `build:vercel` (`prisma generate --schema=prisma/schema.postgresql.prisma && next build`); `vercel.json` pins `buildCommand: "npm run build:vercel"`. Postgres generation verified to read Postgres schema; local dev restored cleanly to SQLite. `db:gen-pg` idempotent.
+  - **Suite Status**: 64/64 Vitest tests pass across 10 test files; `tsc --noEmit` clean; `npx next build` green.
+  - **Secrets & Hygiene**: 0 tracked secrets, 0 `.env`/`dev.db` in git history, 0 literal `rzp_test_` keys in tracked code.
 - **C4 — VERIFIED BY CODE INSPECTION (opus-think, 2026-09-05).** `vercel.json` parses and contains exactly one key, `buildCommand: "npm run build:vercel"` — no framework key, regions, headers or env block. Diff is `vercel.json` + `docs/DEPLOY.md` only; no `src/`, no `package.json`. 64/64, `tsc` clean, tree clean, no `.vercel` directory (nothing was provisioned). `prisma` is a devDependency, so the CLI resolves during Vercel's install step and `build:vercel` can actually run there.
 - **The deploy path as a whole is NOT VERIFIED.** `vercel.json` taking precedence over the dashboard, the Neon push, and the deployed app serving `/demo` have never been executed — this repo has never been deployed. Everything about deployment is design-verified only, and only the human's first real deploy converts it to VERIFIED MANUALLY. Do not describe the deploy as working.
 
