@@ -190,7 +190,7 @@ export function RazorpayZone({
 export function ExecutionAbsent(): React.ReactElement {
   return (
     <div className="exec-absent">
-      <div className="exec-absent__line">Razorpay: not contacted · 0 orders created</div>
+      <div className="exec-absent__line">RAZORPAY NOT REACHED · 0 RAZORPAY OBJECTS CREATED</div>
       <p className="exec-absent__note t-body">
         The gateway refused before the Razorpay adapter was ever called. There is no order to
         cancel, no payment to refund, and no object in the Razorpay dashboard — because the only

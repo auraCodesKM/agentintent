@@ -447,34 +447,29 @@ a {
   padding: 96px 0 56px;
 }
 
-/* The system trace — seven real architecture stages, state-coloured. Sits
-   below the console: explanatory content, not atmosphere. */
-.trace {
+/* The system trace — a fixed architecture diagram, state-coloured. Sits below
+   the console: an explanation of the thesis, not a second hero. At rest it is
+   entirely --ink-faint (≤8% ink); colour appears only where real state has
+   actually reached that stage. */
+.trace2 {
   position: relative;
-  margin-top: 40px;
-  max-width: 760px;
-  display: flex;
-  align-items: baseline;
-  gap: 9px;
-  flex-wrap: wrap;
+  margin: 40px 0 0;
+  max-width: 420px;
+  display: block;
   font-family: var(--font-mono);
-  font-size: 11px;
-  letter-spacing: 0.1em;
-  text-transform: uppercase;
-}
-
-.trace__item {
-  display: inline-flex;
-  align-items: baseline;
-  gap: 9px;
-}
-
-.trace__node {
-  color: var(--ink);
-}
-
-.trace__sep {
+  font-size: 12px;
+  line-height: 1.7;
   color: var(--ink-faint);
+  white-space: pre;
+  overflow-x: auto;
+}
+
+.trace2__node {
+  transition: color var(--d-state) var(--e-state);
+}
+
+.trace2__neutral {
+  color: var(--ink);
 }
 
 .hero__foot {
@@ -1669,12 +1664,8 @@ a {
   .console__field {
     font-size: 18px;
   }
-  .trace {
+  .trace2 {
     font-size: 10px;
-    gap: 7px;
-  }
-  .trace__item {
-    gap: 7px;
   }
   .boundary--entry {
     height: 124px;

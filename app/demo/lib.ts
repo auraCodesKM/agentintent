@@ -118,11 +118,19 @@ export interface LayerView {
 }
 
 /**
- * Derives the four gateway layers from the decision alone.
+ * Derives the four gateway layers from the decision alone, optionally
+ * narrated with the real contract/cart numbers that produced an L2 pass.
  * "NOT REACHED" is used, never "FAIL", for layers the gateway never ran —
  * a policy failure short-circuits before the judge is ever invoked.
+ *
+ * This is the single source both <LayerRail/> and <SystemTrace/> read from,
+ * so the hero trace and the gateway rail can never disagree about state.
  */
-export function deriveLayers(decision: Decision | null): LayerView[] {
+export function deriveLayers(
+  decision: Decision | null,
+  contract?: Contract | null,
+  cart?: CartView | null,
+): LayerView[] {
   const codes = decision?.reason_codes ?? []
   const has = (list: string[]): boolean => codes.some((c) => list.includes(c))
 
@@ -161,7 +169,9 @@ export function deriveLayers(decision: Decision | null): LayerView[] {
       ? "short-circuited at L1"
       : l2Failed
         ? codes.filter((c) => L2_CODES.includes(c)).join(" · ")
-        : "amount · quantity · category all within the contract and merchant policy",
+        : contract && cart
+          ? `${inr(cart.subtotal)} ≤ ${inr(contract.constraints.max_amount)} · qty ${cart.lines.reduce((n, l) => n + l.quantity, 0)} ≤ ${contract.constraints.max_quantity}`
+          : "amount · quantity · category all within the contract and merchant policy",
   }
 
   // Policy failures never invoke the judge. The UI must show that.
@@ -233,47 +243,58 @@ export function boundaryState(decision: Decision | null): "idle" | "crossing" | 
 }
 
 /**
- * The hero system trace. Seven fixed architecture nodes; each node's tone is a
- * pure function of real, already-fetched state — never a timer, never a guess.
- * "reached" nodes past the current stage keep their terminal tone; nodes ahead
- * of it stay faint. This is the same backbone as product.md §1, just legible
- * at a glance.
+ * What is actually in flight, derived from the same four fetch boundaries the
+ * page already awaits (POST /api/sessions, /api/intents, /api/agent/run) —
+ * never a guess, never a sub-step the backend didn't report.
  */
+export type Phase = "idle" | "session" | "compiling" | "running" | "resolved"
+
 export type TraceTone = "faint" | "neutral" | "ai" | "allow" | "stepup" | "block" | "exec"
 
-export interface TraceNode {
-  label: string
-  tone: TraceTone
+/**
+ * The hero system trace, as a fixed diagram (not a scrolling list): the seven
+ * real stages a purchase moves through. Every tone is a pure function of
+ * already-fetched state or the live `phase` of the current fetch — never a
+ * timer, never invented. `gate` and `exit` are read from the SAME LayerView[]
+ * that <LayerRail/> renders, via layers[3] (L4/Authorization), so the trace
+ * and the rail can never disagree.
+ */
+export interface TraceModel {
+  intent: TraceTone
+  buyer: TraceTone
+  proposal: TraceTone
+  gate: TraceTone
+  exit: TraceTone
+  order: TraceTone
+  payment: TraceTone
 }
 
-export function deriveTraceNodes(
+export function deriveTraceModel(
+  phase: Phase,
   hasContract: boolean,
   hasProposal: boolean,
   hasCart: boolean,
+  layers: LayerView[],
   decision: Decision | null,
   hasOrder: boolean,
   paymentStatus: string | null,
-): TraceNode[] {
-  const decisionTone: TraceTone = !decision
-    ? "faint"
-    : decision.decision === "ALLOW"
-      ? "allow"
-      : decision.decision === "STEP_UP"
-        ? "stepup"
-        : "block"
+): TraceModel {
+  const l4 = layers[3]
+  const gate: TraceTone =
+    l4?.state === "pass" ? "allow" : l4?.state === "fail" ? "block" : l4?.state === "warn" ? "stepup" : "faint"
 
   const paymentTone: TraceTone =
     paymentStatus === "captured" ? "allow" : paymentStatus === "failed" ? "block" : hasOrder ? "exec" : "faint"
 
-  return [
-    { label: "user intent", tone: hasContract ? "neutral" : "faint" },
-    { label: "ai buyer", tone: hasProposal ? "ai" : "faint" },
-    { label: "untrusted proposal", tone: hasCart ? "ai" : "faint" },
-    { label: "l1 · l2 · l3 · l4", tone: decisionTone },
-    { label: "authorization boundary", tone: decisionTone },
-    { label: "razorpay", tone: hasOrder ? "exec" : "faint" },
-    { label: "payment", tone: paymentTone },
-  ]
+  return {
+    intent: phase === "compiling" ? "ai" : hasContract ? "neutral" : "faint",
+    buyer: phase === "running" || hasProposal ? "ai" : "faint",
+    proposal: hasCart ? "ai" : "faint",
+    gate,
+    exit: gate,
+    order: hasOrder ? (decision?.decision === "ALLOW" ? "allow" : "exec") : "faint",
+    payment: paymentTone,
+  }
 }
 
 /**

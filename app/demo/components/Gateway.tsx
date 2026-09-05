@@ -3,16 +3,15 @@
 import { useEffect, useRef, useState } from "react"
 import {
   confidenceGloss,
-  deriveLayers,
   inr,
   REASON_GLOSS,
   SEMANTIC_THRESHOLD,
   type CartView,
   type Decision,
+  type LayerView,
 } from "../lib"
 
-export function LayerRail({ decision }: { decision: Decision | null }): React.ReactElement {
-  const layers = deriveLayers(decision)
+export function LayerRail({ layers }: { layers: LayerView[] }): React.ReactElement {
   return (
     <div className="rail">
       {layers.map((l) => (

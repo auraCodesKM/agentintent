@@ -60,7 +60,7 @@ export function BuyerTrace({ transcript }: { transcript: TranscriptEntry[] }): R
       <div className="band__head" style={{ marginTop: 72 }}>
         <h3 className="t-layer">Buyer agent</h3>
         <span className="band__note">
-          {transcript.length} tool call{transcript.length === 1 ? "" : "s"} · 4 tools · bounded at 8 turns
+          transcript · recorded · {transcript.length} turn{transcript.length === 1 ? "" : "s"} · bounded at 8
         </span>
       </div>
       <p className="t-body muted" style={{ maxWidth: "62ch", margin: "0 0 28px" }}>
@@ -73,7 +73,7 @@ export function BuyerTrace({ transcript }: { transcript: TranscriptEntry[] }): R
           <li
             key={i}
             className={`trace-row${t.action.tool === "request_checkout" ? " trace-row--gateway" : ""}`}
-            style={{ ["--i" as string]: i }}
+            style={{ ["--i" as string]: Math.min(i, 17) }}
           >
             <span className="trace-row__n">{String(i + 1).padStart(2, "0")}</span>
             <span className="trace-row__tool is-ai">{t.action.tool}</span>

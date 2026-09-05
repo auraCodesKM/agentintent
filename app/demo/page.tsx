@@ -14,15 +14,21 @@ import { AuditLedger, EvidenceStrip } from "./components/Evidence"
 import {
   boundaryState,
   deriveCart,
-  deriveTraceNodes,
+  deriveLayers,
+  deriveTraceModel,
   type AuditEvent,
   type Contract,
   type Decision,
   type EvalMetricsRow,
   type OrderInfo,
+  type Phase,
   type ReconcileResult,
   type TranscriptEntry,
 } from "./lib"
+
+// Auto-follow never fires more than once per this window, and a request that
+// lands inside it is dropped, not queued — the camera never plays catch-up.
+const AUTO_SCROLL_COALESCE_MS = 900
 
 const MAX_ORDER_POLLS = 40
 const ORDER_POLL_MS = 2500
@@ -53,10 +59,49 @@ export default function DemoPage(): React.ReactElement {
   const [approvedByMerchant, setApprovedByMerchant] = useState(false)
   const [verifyingPayment, setVerifyingPayment] = useState(false)
   const [pollExhausted, setPollExhausted] = useState(false)
+  const [phase, setPhase] = useState<Phase>("idle")
 
-  const boundaryRef = useRef<HTMLDivElement | null>(null)
-  const hadDecision = useRef(false)
   const orderRef = useRef<OrderInfo | null>(null)
+  const phaseRef = useRef<Phase>("idle")
+  const pollingActiveRef = useRef(false)
+  const userTookControlRef = useRef(false)
+  const lastAutoScrollAtRef = useRef(0)
+  const prevPaymentStatusRef = useRef<string | null>(null)
+
+  useEffect(() => {
+    phaseRef.current = phase
+  }, [phase])
+
+  // Manual scroll/keyboard/touch input permanently opts the viewer out of the
+  // camera for the rest of this run — it is never pulled back.
+  useEffect(() => {
+    const takeControl = (): void => {
+      userTookControlRef.current = true
+    }
+    window.addEventListener("wheel", takeControl, { passive: true })
+    window.addEventListener("touchmove", takeControl, { passive: true })
+    window.addEventListener("keydown", takeControl)
+    return () => {
+      window.removeEventListener("wheel", takeControl)
+      window.removeEventListener("touchmove", takeControl)
+      window.removeEventListener("keydown", takeControl)
+    }
+  }, [])
+
+  // The one function allowed to move the viewport on the viewer's behalf.
+  // Fires only while a workflow is genuinely in progress, never after manual
+  // scroll, never under reduced motion, and coalesces bursts of real
+  // transitions into at most one scroll per AUTO_SCROLL_COALESCE_MS.
+  const follow = useCallback((id: string): void => {
+    if (typeof window === "undefined") return
+    if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return
+    if (userTookControlRef.current) return
+    if (phaseRef.current === "idle" && !pollingActiveRef.current) return
+    const now = Date.now()
+    if (now - lastAutoScrollAtRef.current < AUTO_SCROLL_COALESCE_MS) return
+    lastAutoScrollAtRef.current = now
+    document.getElementById(id)?.scrollIntoView({ block: "center", behavior: "smooth" })
+  }, [])
 
   const refreshAudit = useCallback((id: string) => {
     fetch(`/api/audit/${id}`)
@@ -99,6 +144,7 @@ export default function DemoPage(): React.ReactElement {
     const orderId = decision?.razorpay_order_id
     if (!orderId) return
     setPollExhausted(false)
+    pollingActiveRef.current = true
     let pollCount = 0
     let interval: ReturnType<typeof setInterval> | null = null
 
@@ -107,6 +153,7 @@ export default function DemoPage(): React.ReactElement {
       return status === "captured" || status === "failed"
     }
     const stop = (): void => {
+      pollingActiveRef.current = false
       if (interval !== null) {
         clearInterval(interval)
         interval = null
@@ -143,15 +190,15 @@ export default function DemoPage(): React.ReactElement {
     }
   }, [decision?.razorpay_order_id, intentId, refreshOrder, refreshAudit])
 
-  // The only automatic scroll on the page: when a decision actually arrives,
-  // bring the boundary and the decision plate into one frame.
+  // Payment capture is the one settle transition that arrives asynchronously,
+  // via polling rather than a direct response — follow it the same way.
   useEffect(() => {
-    if (decision && !hadDecision.current) {
-      hadDecision.current = true
-      boundaryRef.current?.scrollIntoView({ block: "center", behavior: "smooth" })
+    const status = order?.payment?.status ?? null
+    if (status === "captured" && prevPaymentStatusRef.current !== "captured") {
+      follow("band-execution")
     }
-    if (!decision) hadDecision.current = false
-  }, [decision])
+    prevPaymentStatusRef.current = status
+  }, [order?.payment?.status, follow])
 
   async function createIntentAndRun(): Promise<void> {
     setError("")
@@ -164,11 +211,14 @@ export default function DemoPage(): React.ReactElement {
     setApprovalError("")
     setApprovedByMerchant(false)
     setPollExhausted(false)
+    userTookControlRef.current = false
+    setPhase("session")
     try {
       setBusy("creating session...")
       const sess = (await (await fetch("/api/sessions", { method: "POST" })).json()) as {
         session_id: string
       }
+      setPhase("compiling")
       setBusy("compiling intent (Gemini)...")
       const intentRes = await fetch("/api/intents", {
         method: "POST",
@@ -183,12 +233,15 @@ export default function DemoPage(): React.ReactElement {
       if (!intentRes.ok || !intentData.intent_id) {
         setError(`Intent failed: ${intentData.error ?? intentRes.status}`)
         setBusy("")
+        setPhase("idle")
         return
       }
       setIntentId(intentData.intent_id)
       setContract(intentData.contract ?? null)
       refreshAudit(intentData.intent_id)
+      follow("band-untrusted")
 
+      setPhase("running")
       setBusy("running buyer agent (Gemini, max 8 turns)...")
       const runRes = await fetch("/api/agent/run", {
         method: "POST",
@@ -205,10 +258,13 @@ export default function DemoPage(): React.ReactElement {
       } else {
         setTranscript(runData.transcript ?? [])
         setDecision(runData.decision ?? null)
+        follow("band-boundary")
       }
       refreshAudit(intentData.intent_id)
+      setPhase("resolved")
     } catch (err) {
       setError(String(err))
+      setPhase("idle")
     } finally {
       setBusy("")
     }
@@ -280,10 +336,15 @@ export default function DemoPage(): React.ReactElement {
       : "38%"
   const exitState: typeof bstate = decision?.razorpay_order_id ? "crossing" : bstate
 
-  const traceNodes = deriveTraceNodes(
+  // Single source for gateway layer state — <LayerRail/> and <SystemTrace/>
+  // both read this array, so they can never disagree.
+  const layers = deriveLayers(decision, contract, cart)
+  const traceModel = deriveTraceModel(
+    phase,
     !!contract,
     transcript.length > 0,
     !!cart,
+    layers,
     decision,
     !!decision?.razorpay_order_id,
     order?.payment?.status ?? null,
@@ -345,7 +406,7 @@ export default function DemoPage(): React.ReactElement {
                 </div>
               </div>
 
-              <SystemTrace nodes={traceNodes} />
+              <SystemTrace model={traceModel} />
             </div>
             <div className="hero__foot">
               <div className="hero__foot-inner t-micro">
@@ -383,7 +444,7 @@ export default function DemoPage(): React.ReactElement {
         </section>
 
         {/* --------------------------- band 3 · membrane, entry surface */}
-        <div ref={boundaryRef} id="band-boundary">
+        <div id="band-boundary">
           <TrustBoundary
             state={bstate}
             surface="entry"
@@ -444,7 +505,7 @@ export default function DemoPage(): React.ReactElement {
               <div className="band__head" style={{ marginTop: 72, marginBottom: 14 }}>
                 <span className="t-micro muted">how it was reached · four layers, in order</span>
               </div>
-              <LayerRail decision={decision} />
+              <LayerRail layers={layers} />
             </div>
           </div>
         </section>

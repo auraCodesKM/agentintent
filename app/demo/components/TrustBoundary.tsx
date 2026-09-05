@@ -1,13 +1,13 @@
 "use client"
 
 import { useMemo } from "react"
-import { glyphAt, glyphWeight, type TraceNode, type TraceTone } from "../lib"
+import { glyphAt, glyphWeight, type TraceModel, type TraceTone } from "../lib"
 
 export type BoundaryState = "idle" | "crossing" | "sealed" | "awaiting"
 
 const TONE_CLASS: Record<TraceTone, string> = {
   faint: "faint",
-  neutral: "",
+  neutral: "trace2__neutral",
   ai: "is-ai",
   allow: "is-allow",
   stepup: "is-stepup",
@@ -16,30 +16,57 @@ const TONE_CLASS: Record<TraceTone, string> = {
 }
 
 /**
- * The hero system trace — replaces the old decorative glyph backdrop with the
- * one diagram that actually matters: the seven real stages a purchase moves
- * through. Every node's colour is a pure function of already-fetched state
- * (see deriveTraceNodes); nothing here runs on a timer. A node re-mounts
- * (via its key) only when its tone changes, replaying the existing `.reveal`
- * blur-in exactly once per real transition — reduced-motion collapses that to
- * a plain fade via the global media query, same as everywhere else on the page.
+ * The hero system trace — a fixed monospace diagram of the real architecture,
+ * not a second hero. Geometry never changes; only tone does, and tone is a
+ * pure function of already-fetched state (see deriveTraceModel in lib.ts).
+ * "entry"/"exit surface" are the same two membrane surfaces <TrustBoundary/>
+ * renders further down the page — this is that same boundary, explained.
+ * A node's key includes its tone, so it re-mounts (replaying `.reveal`) only
+ * on a real transition; reduced-motion collapses that to a plain fade via the
+ * global media query, same as everywhere else on the page.
  */
-export function SystemTrace({ nodes }: { nodes: TraceNode[] }): React.ReactElement {
+export function SystemTrace({ model }: { model: TraceModel }): React.ReactElement {
+  const tone = (t: TraceTone): string => `trace2__node reveal ${TONE_CLASS[t]}`
+  const key = (label: string, t: TraceTone): string => `${label}:${t}`
+
   return (
-    <div className="trace" aria-live="off">
-      {nodes.map((n, i) => (
-        <span className="trace__item" key={`item-${i}`}>
-          <span key={`${n.label}:${n.tone}`} className={`trace__node reveal ${TONE_CLASS[n.tone]}`}>
-            {n.label}
-          </span>
-          {i < nodes.length - 1 && (
-            <span className="trace__sep" aria-hidden="true">
-              →
-            </span>
-          )}
-        </span>
-      ))}
-    </div>
+    <pre className="trace2" aria-label="system architecture trace">
+      <span>{"   "}</span>
+      <span key={key("intent", model.intent)} className={tone(model.intent)}>
+        user intent
+      </span>
+      {"\n        │\n   "}
+      <span key={key("buyer", model.buyer)} className={tone(model.buyer)}>
+        ai buyer
+      </span>
+      <span className="faint">{"          search · inspect · propose"}</span>
+      {"\n        │\n   "}
+      <span key={key("proposal", model.proposal)} className={tone(model.proposal)}>
+        untrusted proposal
+      </span>
+      {"\n   "}
+      <span key={key("gate-rule", model.gate)} className={tone(model.gate)}>
+        {"──────────────────"}
+      </span>
+      <span className="faint">{"  entry surface"}</span>
+      {"\n        │\n   "}
+      <span key={key("gate", model.gate)} className={tone(model.gate)}>
+        l1 · l2 · l3 · l4
+      </span>
+      {"\n   "}
+      <span key={key("exit-rule", model.exit)} className={tone(model.exit)}>
+        {"──────────────────"}
+      </span>
+      <span className="faint">{"  exit surface"}</span>
+      {"\n        │\n   "}
+      <span key={key("order", model.order)} className={tone(model.order)}>
+        [ razorpay ]
+      </span>
+      <span className="faint">{"  order → "}</span>
+      <span key={key("payment", model.payment)} className={tone(model.payment)}>
+        payment
+      </span>
+    </pre>
   )
 }
 
