@@ -33,7 +33,17 @@ Razorpay AI Buildathon 2026 · Track 1: AI Growth & Agentic Commerce
 
 <div align="center">
 
-[**Watch on Canva ↗**](https://www.canva.com/design/DAHUWuDXu9s/8pJTK7gbfEOiqFOqO93qYA/watch) — the embed above won't autoplay on github.com (iframes are stripped there); it plays inline in VS Code, Cursor, and any renderer that isn't github.com's own sanitizer.
+<a href="https://www.canva.com/design/DAHUWuDXu9s/8pJTK7gbfEOiqFOqO93qYA/watch">
+
+<img src="YOUR_THUMBNAIL_URL" alt="AgentIntent demo">
+
+</a>
+
+<p>
+  <a href="https://www.canva.com/design/DAHUWuDXu9s/8pJTK7gbfEOiqFOqO93qYA/watch">
+    ▶ Watch the 5-minute demo
+  </a>
+</p>
 
 </div>
 
