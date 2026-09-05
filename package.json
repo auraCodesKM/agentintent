@@ -14,7 +14,8 @@
     "eval:gen": "tsx scripts/generate_eval.ts",
     "eval:run": "tsx scripts/run_eval.ts",
     "db:migrate": "prisma migrate deploy",
-    "db:gen-pg": "tsx scripts/gen_pg_schema.ts"
+    "db:gen-pg": "tsx scripts/gen_pg_schema.ts",
+    "demo:webhook-fail": "tsx scripts/webhook_failure_demo.ts"
   },
   "dependencies": {
     "@google/genai": "^1.9.0",
