@@ -1,8 +1,6 @@
-export default function Home() {
-  return (
-    <main>
-      <h1>AgentIntent</h1>
-      <p>Merchant-side intent and policy gateway. Demo UI arrives after the gateway is real (P14).</p>
-    </main>
-  )
+import { redirect } from "next/navigation"
+
+// The gateway is the product. There is nothing to land on ahead of it.
+export default function Home(): never {
+  redirect("/demo")
 }

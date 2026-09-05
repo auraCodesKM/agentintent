@@ -77,46 +77,84 @@ export default function CheckoutPage({ params }: { params: Promise<{ orderId: st
   }
 
   return (
-    <main style={{ fontFamily: "ui-monospace, monospace", padding: "32px 24px 64px", maxWidth: 640, margin: "0 auto", lineHeight: 1.5 }}>
-      <h1 style={{ fontSize: 20, margin: "0 0 20px" }}>AgentIntent — Test Mode Checkout</h1>
-      {order ? (
-        <>
-          <div style={{ padding: "14px 18px", borderRadius: 8, border: "1px solid #e5e7eb", background: "#f9fafb", marginBottom: 16 }}>
-            <p style={{ margin: 0 }}>
-              Order: <b style={{ userSelect: "all", cursor: "text" }}>{order.razorpay_order_id}</b> · ₹
-              {(order.amount_paise / 100).toLocaleString("en-IN")} · status: {order.status}
-            </p>
-            {order.payment && (
-              <p style={{ margin: "8px 0 0" }}>
-                Payment: <b style={{ userSelect: "all", cursor: "text" }}>{order.payment.razorpay_payment_id}</b> ·{" "}
-                {order.payment.status}
-              </p>
-            )}
+    <>
+      <header className="masthead">
+        <div className="masthead__inner">
+          <span className="masthead__mark">AgentIntent</span>
+          <span className="t-micro masthead__role">authorized execution</span>
+          <div className="t-micro masthead__meta">
+            <span>[test mode]</span>
+            <span className="opt">[sandbox · no real money]</span>
           </div>
-          <button
-            onClick={pay}
-            disabled={!scriptReady}
-            style={{
-              padding: "10px 20px",
-              fontSize: 15,
-              borderRadius: 6,
-              border: "1px solid #111827",
-              background: scriptReady ? "#111827" : "#9ca3af",
-              color: "white",
-              fontFamily: "inherit",
-              cursor: scriptReady ? "pointer" : "default",
-            }}
-          >
-            {scriptReady ? "Pay (Test Mode)" : "Loading checkout..."}
-          </button>
-          <p style={{ color: "#6b7280", marginTop: 12 }}>
-            Test UPI: <code>success@razorpay</code> (success) / <code>failure@razorpay</code> (failure)
+        </div>
+      </header>
+
+      <main className="sheet">
+        <p className="t-micro faint" style={{ marginBottom: 28 }}>
+          this order exists because the gateway authorized it
+        </p>
+        <h1 className="t-thesis" style={{ fontSize: "clamp(30px, 4.4vw, 46px)" }}>
+          Test Mode checkout
+        </h1>
+
+        {order ? (
+          <>
+            <div className="sheet__rows">
+              <div className="sheet__row">
+                <span className="sheet__key t-micro">razorpay order</span>
+                <span className="sheet__val id is-exec">{order.razorpay_order_id}</span>
+              </div>
+              <div className="sheet__row">
+                <span className="sheet__key t-micro">amount</span>
+                <span className="sheet__val">
+                  ₹{(order.amount_paise / 100).toLocaleString("en-IN")} {order.currency}
+                </span>
+              </div>
+              <div className="sheet__row">
+                <span className="sheet__key t-micro">order status</span>
+                <span className="sheet__val">{order.status}</span>
+              </div>
+              <div className="sheet__row">
+                <span className="sheet__key t-micro">payment</span>
+                <span className="sheet__val">
+                  {order.payment ? (
+                    <>
+                      <span className="id">{order.payment.razorpay_payment_id}</span>
+                      <span className="muted"> · {order.payment.status}</span>
+                    </>
+                  ) : (
+                    <span className="muted">NOT CAPTURED</span>
+                  )}
+                </span>
+              </div>
+            </div>
+
+            <div className="console__row" style={{ marginTop: 36 }}>
+              <button type="button" className="btn" onClick={pay} disabled={!scriptReady}>
+                {scriptReady ? "pay (test mode)" : "loading checkout…"}
+              </button>
+              <a className="link" href="/demo">
+                ← back to gateway
+              </a>
+            </div>
+
+            <p className="method" style={{ marginTop: 28 }}>
+              test upi: <code>success@razorpay</code> (success) · <code>failure@razorpay</code> (failure). The
+              signature returned by Checkout is verified server-side before any payment state is persisted.
+            </p>
+          </>
+        ) : (
+          <p className="t-data faint" style={{ marginTop: 36 }}>
+            LOADING ORDER…
           </p>
-        </>
-      ) : (
-        <p>Loading order...</p>
-      )}
-      {result && <p style={{ marginTop: 16 }}>{result}</p>}
-    </main>
+        )}
+
+        {result && (
+          <p className="t-data" style={{ marginTop: 24 }}>
+            {result}
+          </p>
+        )}
+      </main>
+    </>
   )
 }

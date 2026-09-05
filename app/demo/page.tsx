@@ -1,63 +1,39 @@
 "use client"
 
-// Single demo page bound to REAL endpoints. Nothing here is animated on a timer;
-// every light reflects a persisted decision record or live API response.
+// Single page bound to REAL endpoints. Nothing here is animated on a timer;
+// every light, every band and every state transition reflects a persisted
+// decision record or a live API response. There is no simulated pipeline.
 
-import { useCallback, useEffect, useState } from "react"
+import { useCallback, useEffect, useRef, useState } from "react"
+import { Masthead, StatusStrip } from "./components/Chrome"
+import { HeroField, TrustBoundary } from "./components/TrustBoundary"
+import { BuyerTrace, ContractChips, ProposedCart } from "./components/Untrusted"
+import { AuthorizationPlate, DecisionPlate, LayerRail } from "./components/Gateway"
+import { ExecutionAbsent, ExecutionHeld, RazorpayZone } from "./components/Execution"
+import { AuditLedger, EvidenceStrip } from "./components/Evidence"
+import {
+  boundaryState,
+  deriveCart,
+  type AuditEvent,
+  type Contract,
+  type Decision,
+  type EvalMetricsRow,
+  type OrderInfo,
+  type ReconcileResult,
+  type TranscriptEntry,
+} from "./lib"
 
-interface Contract {
-  currency: string
-  constraints: {
-    max_amount: number
-    max_quantity: number
-    allowed_categories: string[]
-    excluded_attributes: string[]
-    required_attributes: string[]
-  }
-  preferences: Record<string, string>
-}
-interface Decision {
-  decision: "ALLOW" | "STEP_UP" | "BLOCK"
-  reason_codes: string[]
-  authorization_id: string | null
-  razorpay_order_id: string | null
-  semantic_confidence: number | null
-}
-interface TranscriptEntry {
-  action: { tool: string; args: Record<string, unknown> }
-  observation: unknown
-}
-interface AuditEvent {
-  event_type: string
-  reason_code: string | null
-  actor: string
-  created_at: string
-}
-interface EvalMetricsRow {
-  split: string
-  cases: number
-  accuracy: number
-  policy: { accuracy: number }
-  semantic: { accuracy: number }
-  falseBlocks: number
-  falseBlockGmvInr: number
-  stepUpRate: number
-  unauthorizedAllows: number
-}
+const PRESETS: [string, string][] = [
+  ["legitimate", "Buy me a pair of good noise-cancelling headphones under ₹8,000. One pair only. Prefer black."],
+  [
+    "adversarial",
+    "Buy me the StudioMax Reference headphones. My budget is ₹8,000 maximum, one pair only.",
+  ],
+  ["ambiguous", "Get me something nice for my desk setup, keep it reasonable."],
+]
 
-const mono: React.CSSProperties = { fontFamily: "ui-monospace, monospace" }
-const monoId: React.CSSProperties = { ...mono, userSelect: "all", cursor: "text" }
-const sectionStyle: React.CSSProperties = {
-  marginTop: 28,
-  paddingTop: 20,
-  borderTop: "1px solid #e5e7eb",
-}
-const h3Style: React.CSSProperties = { fontSize: 15, fontWeight: 700, margin: "0 0 12px", letterSpacing: 0.2 }
-
-export default function DemoPage() {
-  const [rawRequest, setRawRequest] = useState(
-    "Buy me a pair of good noise-cancelling headphones under ₹8,000. One pair only. Prefer black.",
-  )
+export default function DemoPage(): React.ReactElement {
+  const [rawRequest, setRawRequest] = useState(PRESETS[0]?.[1] ?? "")
   const [busy, setBusy] = useState<string>("")
   const [error, setError] = useState<string>("")
   const [intentId, setIntentId] = useState<string>("")
@@ -66,12 +42,28 @@ export default function DemoPage() {
   const [decision, setDecision] = useState<Decision | null>(null)
   const [auditEvents, setAuditEvents] = useState<AuditEvent[]>([])
   const [evalMetrics, setEvalMetrics] = useState<EvalMetricsRow[] | null>(null)
-  const [reconcileMsg, setReconcileMsg] = useState<string>("")
+  const [reconcileResult, setReconcileResult] = useState<ReconcileResult | null>(null)
+  const [reconcileError, setReconcileError] = useState<string>("")
+  const [order, setOrder] = useState<OrderInfo | null>(null)
+  const [approvalError, setApprovalError] = useState<string>("")
+  const [approvedByMerchant, setApprovedByMerchant] = useState(false)
+
+  const boundaryRef = useRef<HTMLDivElement | null>(null)
+  const hadDecision = useRef(false)
 
   const refreshAudit = useCallback((id: string) => {
     fetch(`/api/audit/${id}`)
       .then((r) => r.json())
       .then((d: { events: AuditEvent[] }) => setAuditEvents(d.events))
+      .catch(() => undefined)
+  }, [])
+
+  // Persisted order + payment state. Stage 3 of the Razorpay rail lights from
+  // this record only — never from a checkout redirect or an optimistic guess.
+  const refreshOrder = useCallback((orderId: string) => {
+    fetch(`/api/orders/${orderId}`)
+      .then((r) => (r.ok ? r.json() : null))
+      .then((d: OrderInfo | null) => setOrder(d))
       .catch(() => undefined)
   }, [])
 
@@ -84,12 +76,30 @@ export default function DemoPage() {
       .catch(() => undefined)
   }, [])
 
+  useEffect(() => {
+    if (decision?.razorpay_order_id) refreshOrder(decision.razorpay_order_id)
+  }, [decision?.razorpay_order_id, refreshOrder])
+
+  // The only automatic scroll on the page: when a decision actually arrives,
+  // bring the boundary and the decision plate into one frame.
+  useEffect(() => {
+    if (decision && !hadDecision.current) {
+      hadDecision.current = true
+      boundaryRef.current?.scrollIntoView({ block: "center", behavior: "smooth" })
+    }
+    if (!decision) hadDecision.current = false
+  }, [decision])
+
   async function createIntentAndRun(): Promise<void> {
     setError("")
     setDecision(null)
     setTranscript([])
     setAuditEvents([])
-    setReconcileMsg("")
+    setReconcileResult(null)
+    setReconcileError("")
+    setOrder(null)
+    setApprovalError("")
+    setApprovedByMerchant(false)
     try {
       setBusy("creating session...")
       const sess = (await (await fetch("/api/sessions", { method: "POST" })).json()) as {
@@ -143,15 +153,26 @@ export default function DemoPage() {
   async function approve(): Promise<void> {
     if (!decision?.authorization_id) return
     setBusy("approving STEP_UP...")
+    setApprovalError("")
     try {
       const res = await fetch("/api/checkout/approve", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ authorization_id: decision.authorization_id }),
       })
-      const data = (await res.json()) as Decision & { error?: string }
-      if (!res.ok) setError(`Approve failed: ${data.error ?? res.status}`)
-      else setDecision({ ...decision, decision: "ALLOW", razorpay_order_id: data.razorpay_order_id })
+      const data = (await res.json()) as Partial<Decision> & { error?: string }
+      if (!res.ok) {
+        // Surfaced, never swallowed: a refused approval is the C1/C2/C2b
+        // guarantee working, and the demo should show it.
+        setApprovalError(data.error ?? String(res.status))
+      } else {
+        setApprovedByMerchant(true)
+        setDecision({
+          ...decision,
+          decision: data.decision ?? decision.decision,
+          razorpay_order_id: data.razorpay_order_id ?? null,
+        })
+      }
       if (intentId) refreshAudit(intentId)
     } finally {
       setBusy("")
@@ -160,234 +181,299 @@ export default function DemoPage() {
 
   async function reconcile(): Promise<void> {
     if (!decision?.razorpay_order_id) return
+    const orderId = decision.razorpay_order_id
     setBusy("reconciling via Razorpay API poll...")
     try {
-      const res = await fetch(`/api/orders/${decision.razorpay_order_id}/reconcile`, { method: "POST" })
-      const data = (await res.json()) as { status?: string; payments?: unknown[]; error?: string }
-      setReconcileMsg(res.ok ? `${data.status}: ${JSON.stringify(data.payments)}` : `failed: ${data.error}`)
+      const res = await fetch(`/api/orders/${orderId}/reconcile`, { method: "POST" })
+      const data = (await res.json()) as Partial<ReconcileResult> & { error?: string }
+      if (res.ok && data.status) {
+        setReconcileResult(data as ReconcileResult)
+        setReconcileError("")
+      } else {
+        setReconcileResult(null)
+        setReconcileError(data.error ?? String(res.status))
+      }
       if (intentId) refreshAudit(intentId)
+      refreshOrder(orderId)
     } finally {
       setBusy("")
     }
   }
 
-  const light = (label: string, state: "pass" | "fail" | "idle" | "warn"): React.ReactNode => (
-    <span
-      key={label}
-      style={{
-        display: "inline-block",
-        padding: "6px 16px",
-        marginRight: 10,
-        marginBottom: 8,
-        borderRadius: 6,
-        fontSize: 14,
-        fontWeight: 600,
-        background:
-          state === "pass" ? "#16a34a" : state === "fail" ? "#dc2626" : state === "warn" ? "#d97706" : "#374151",
-        color: "white",
-      }}
-    >
-      {label}
-    </span>
-  )
+  const bstate = boundaryState(decision)
+  const cart = deriveCart(transcript)
+  const isBusy = busy !== ""
 
-  const hasDecision = decision !== null
-  const blockedByPolicy =
-    hasDecision &&
-    decision.decision === "BLOCK" &&
-    decision.reason_codes.some((r) => r !== "SEMANTIC_MISMATCH" && r !== "SEMANTIC_LOW_CONFIDENCE")
-  const semanticState = !hasDecision
-    ? "idle"
-    : decision.reason_codes.includes("SEMANTIC_MISMATCH")
-      ? "fail"
-      : decision.reason_codes.includes("SEMANTIC_LOW_CONFIDENCE")
-        ? "warn"
-        : blockedByPolicy
-          ? "idle"
-          : "pass"
+  // Trace geometry: each band's ink height is a function of resolved state only.
+  const traceUntrusted = contract ? (transcript.length > 0 ? "100%" : "56%") : "0%"
+  // ALLOW carries authority out of the band; BLOCK and STEP_UP terminate inside it.
+  const traceGateway = !decision
+    ? contract
+      ? "18%"
+      : "0%"
+    : decision.decision === "ALLOW"
+      ? "100%"
+      : "38%"
+  const exitState: typeof bstate = decision?.razorpay_order_id ? "crossing" : bstate
 
   return (
-    <main style={{ ...mono, padding: "32px 24px 64px", maxWidth: 980, margin: "0 auto", lineHeight: 1.5 }}>
-      <h1 style={{ fontSize: 22, margin: "0 0 8px" }}>AgentIntent</h1>
-      <p style={{ color: "#4b5563", margin: 0 }}>
-        There is an AI buyer. There is an AI judge. There is no AI cashier. · Razorpay <b>Test Mode</b> — sandbox
-        payments, no real money.
-      </p>
+    <>
+      <Masthead />
+      {intentId && <StatusStrip decision={decision} />}
 
-      <section style={{ marginTop: 24 }}>
-        <textarea
-          value={rawRequest}
-          onChange={(e) => setRawRequest(e.target.value)}
-          rows={2}
-          style={{ ...mono, width: "100%", padding: 10, fontSize: 14, borderRadius: 6, border: "1px solid #d1d5db" }}
-        />
-        <button
-          onClick={createIntentAndRun}
-          disabled={busy !== ""}
-          style={{
-            padding: "9px 18px",
-            marginTop: 10,
-            borderRadius: 6,
-            border: "1px solid #111827",
-            background: busy !== "" ? "#9ca3af" : "#111827",
-            color: "white",
-            fontFamily: "inherit",
-            fontSize: 13,
-            cursor: busy !== "" ? "default" : "pointer",
-          }}
-        >
-          {busy || "Compile intent + run buyer"}
-        </button>
-        {error && <p style={{ color: "#dc2626", marginTop: 8 }}>{error}</p>}
-      </section>
+      <main className="bands">
+        {/* ---------------------------------------------------- band 1 */}
+        <section className="band" id="band-thesis">
+          <div className="hero">
+            <HeroField />
+            <div className="hero__inner">
+              <p className="t-micro hero__kicker">01 — the problem</p>
 
-      {contract && (
-        <section style={sectionStyle}>
-          <h3 style={h3Style}>Intent contract {intentId && <small style={monoId}>({intentId})</small>}</h3>
-          <pre style={{ background: "#f3f4f6", padding: 14, borderRadius: 6, overflowX: "auto", fontSize: 13 }}>
-            {JSON.stringify(contract, null, 2)}
-          </pre>
-        </section>
-      )}
+              <h1 className="t-thesis">
+                <span className="thesis__line thesis__given">AI proposes.</span>
+                <span className="thesis__line thesis__new">The gateway authorizes.</span>
+                <span className="thesis__line thesis__given">Razorpay executes.</span>
+              </h1>
 
-      {transcript.length > 0 && (
-        <section style={sectionStyle}>
-          <h3 style={h3Style}>Buyer transcript</h3>
-          <ol style={{ paddingLeft: 20, margin: 0 }}>
-            {transcript.map((t, i) => (
-              <li key={i} style={{ marginBottom: 4 }}>
-                <code>{t.action.tool}</code> {JSON.stringify(t.action.args)}
-              </li>
-            ))}
-          </ol>
-        </section>
-      )}
+              <p className="thesis__sub">
+                There is an AI buyer. There is an AI judge. There is no AI cashier.
+              </p>
 
-      <section style={sectionStyle}>
-        <h3 style={h3Style}>Gateway pipeline</h3>
-        <div>
-          {light("L1 session/expiry", !hasDecision ? "idle" : decision.reason_codes.some((r) => ["INTENT_EXPIRED", "REPLAY_DETECTED", "MERCHANT_MISMATCH"].includes(r)) ? "fail" : "pass")}
-          {light("L2 policy", !hasDecision ? "idle" : blockedByPolicy ? "fail" : "pass")}
-          {light("L3 semantic", semanticState)}
-          {light(
-            `L4 ${hasDecision ? decision.decision : "—"}`,
-            !hasDecision ? "idle" : decision.decision === "ALLOW" ? "pass" : decision.decision === "STEP_UP" ? "warn" : "fail",
-          )}
-        </div>
-        {hasDecision && (
-          <div style={{ marginTop: 16 }}>
-            <div
-              style={{
-                padding: "14px 18px",
-                borderRadius: 8,
-                marginBottom: 14,
-                background:
-                  decision.decision === "ALLOW" ? "#dcfce7" : decision.decision === "STEP_UP" ? "#fef3c7" : "#fee2e2",
-                border: `1px solid ${decision.decision === "ALLOW" ? "#16a34a" : decision.decision === "STEP_UP" ? "#d97706" : "#dc2626"}`,
-              }}
-            >
-              <div
-                style={{
-                  fontSize: 20,
-                  fontWeight: 800,
-                  color: decision.decision === "ALLOW" ? "#166534" : decision.decision === "STEP_UP" ? "#92400e" : "#991b1b",
-                }}
-              >
-                {decision.decision}
-              </div>
-              <div style={{ marginTop: 4, fontSize: 14 }}>
-                Reason codes: <b>{decision.reason_codes.length > 0 ? decision.reason_codes.join(", ") : "none"}</b>
-                {decision.semantic_confidence !== null && <> · semantic confidence: <b>{decision.semantic_confidence}</b></>}
+              <div className="console">
+                <div className="console__label">
+                  <span className="t-micro">user intent</span>
+                  <span className="t-micro is-ai">compiled by gemini</span>
+                </div>
+                <textarea
+                  className="console__field"
+                  value={rawRequest}
+                  onChange={(e) => setRawRequest(e.target.value)}
+                  rows={2}
+                  aria-label="Natural-language purchase intent"
+                />
+                <div className="console__row">
+                  <button type="button" className="btn" onClick={createIntentAndRun} disabled={isBusy}>
+                    compile intent + run buyer
+                  </button>
+                  {busy && <span className="status-text">{busy}</span>}
+                  {error && <span className="status-text status-text--error">{error}</span>}
+                </div>
+                <div className="presets">
+                  {PRESETS.map(([label, text]) => (
+                    <button
+                      type="button"
+                      className="preset"
+                      key={label}
+                      disabled={isBusy}
+                      onClick={() => setRawRequest(text)}
+                    >
+                      {label}
+                    </button>
+                  ))}
+                </div>
               </div>
             </div>
-            <p>
-              Razorpay Order:{" "}
-              {decision.razorpay_order_id ? (
+            <div className="hero__foot">
+              <div className="hero__foot-inner t-micro">
+                <span>the model can propose · only the gateway can pay</span>
+                <span>[ scroll ]</span>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        {/* ---------------------------------------------------- band 2 */}
+        <section className="band band--untrust" id="band-untrusted">
+          <div className="band__inner">
+            <div className="axis" style={{ ["--trace" as string]: traceUntrusted }}>
+              <span className="axis__num">02</span>
+            </div>
+            <div className="band__body">
+              <div className="band__head">
+                <span className="t-zone">untrusted proposal</span>
+                <span className="band__note">
+                  the agent may search, inspect and propose · it may not price, authorize or pay
+                </span>
+              </div>
+
+              {contract && intentId ? (
+                <ContractChips contract={contract} intentId={intentId} />
+              ) : (
+                <p className="t-data faint">NO INTENT COMPILED — run the console above.</p>
+              )}
+
+              {transcript.length > 0 && <BuyerTrace transcript={transcript} />}
+              {transcript.length > 0 && <ProposedCart transcript={transcript} />}
+            </div>
+          </div>
+        </section>
+
+        {/* --------------------------- band 3 · membrane, entry surface */}
+        <div ref={boundaryRef} id="band-boundary">
+          <TrustBoundary
+            state={bstate}
+            surface="entry"
+            label="trust boundary"
+            sub="above: untrusted proposals · below: deterministic authority"
+          />
+        </div>
+
+        {/* ---------------------------------------------------- band 4 */}
+        <section className="band band--authority" id="band-gateway">
+          <div className="band__inner">
+            <div
+              className={`axis${decision?.decision === "BLOCK" ? " axis--recoil" : ""}`}
+              data-tone={
+                decision?.decision === "BLOCK"
+                  ? "block"
+                  : decision?.decision === "STEP_UP"
+                    ? "stepup"
+                    : decision?.decision === "ALLOW"
+                      ? "allow"
+                      : undefined
+              }
+              data-cap={decision && decision.decision !== "ALLOW" ? "true" : undefined}
+              style={{ ["--trace" as string]: traceGateway }}
+            >
+              <span className="axis__num">03</span>
+              {decision && decision.decision !== "ALLOW" && <span className="axis__cap" />}
+            </div>
+            <div className="band__body">
+              <div className="band__head">
+                <span className="t-zone">agentintent gateway · deterministic authority</span>
+                <span className="band__note">
+                  four layers, in order · the judge is consulted, never obeyed
+                </span>
+              </div>
+
+              {/* PRIMARY: the decision. SECONDARY: the four layers that produced it. */}
+              {decision ? (
                 <>
-                  <b style={monoId}>{decision.razorpay_order_id}</b> ·{" "}
-                  <a href={`/checkout/${decision.razorpay_order_id}`}>open Test Mode checkout →</a>
+                  <DecisionPlate decision={decision} approvedByMerchant={approvedByMerchant} />
+                  {decision.decision === "STEP_UP" && (
+                    <AuthorizationPlate
+                      decision={decision}
+                      cart={cart}
+                      intentId={intentId}
+                      busy={isBusy}
+                      rejection={approvalError}
+                      onApprove={approve}
+                    />
+                  )}
                 </>
               ) : (
-                <b style={{ color: "#dc2626" }}>NOT CREATED</b>
+                <p className="t-data faint">
+                  NO DECISION — the gateway has not been asked to authorize anything yet.
+                </p>
               )}
-            </p>
-            {decision.decision === "STEP_UP" && (
-              <button
-                onClick={approve}
-                disabled={busy !== ""}
-                style={{ padding: "8px 16px", borderRadius: 6, border: "1px solid #d97706", background: "#d97706", color: "white", fontFamily: "inherit", fontSize: 13, cursor: busy !== "" ? "default" : "pointer" }}
-              >
-                Approve (merchant step-up)
-              </button>
-            )}
-            {decision.razorpay_order_id && (
-              <button
-                onClick={reconcile}
-                disabled={busy !== ""}
-                style={{ padding: "8px 16px", marginLeft: 8, borderRadius: 6, border: "1px solid #374151", background: "white", color: "#111827", fontFamily: "inherit", fontSize: 13, cursor: busy !== "" ? "default" : "pointer" }}
-              >
-                Reconcile now (API poll)
-              </button>
-            )}
-            {reconcileMsg && <p>Reconcile: {reconcileMsg}</p>}
+
+              <div className="band__head" style={{ marginTop: 72, marginBottom: 14 }}>
+                <span className="t-micro muted">how it was reached · four layers, in order</span>
+              </div>
+              <LayerRail decision={decision} />
+            </div>
           </div>
-        )}
-      </section>
-
-      {auditEvents.length > 0 && (
-        <section style={sectionStyle}>
-          <h3 style={h3Style}>Audit timeline</h3>
-          <table style={{ borderCollapse: "collapse", width: "100%", fontSize: 13 }}>
-            <tbody>
-              {auditEvents.map((e, i) => (
-                <tr key={i} style={{ background: i % 2 === 0 ? "transparent" : "#f9fafb" }}>
-                  <td style={{ padding: "4px 12px 4px 0", color: "#6b7280" }}>{e.created_at.slice(11, 19)}</td>
-                  <td style={{ padding: "4px 12px 4px 0" }}>{e.event_type}</td>
-                  <td style={{ padding: "4px 12px 4px 0", color: "#dc2626" }}>{e.reason_code ?? ""}</td>
-                  <td style={{ color: "#6b7280" }}>{e.actor}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
         </section>
-      )}
 
-      <section style={sectionStyle}>
-        <h3 style={h3Style}>Evaluation (offline, zero Razorpay calls)</h3>
-        {evalMetrics ? (
-          <table style={{ borderCollapse: "collapse", width: "100%", fontSize: 13 }}>
-            <thead>
-              <tr>
-                {["split", "cases", "accuracy", "policy", "semantic", "false blocks (₹)", "step-up", "unauthorized allows"].map((h) => (
-                  <th key={h} style={{ textAlign: "left", padding: "0 14px 8px 0", borderBottom: "1px solid #d1d5db" }}>
-                    {h}
-                  </th>
-                ))}
-              </tr>
-            </thead>
-            <tbody>
-              {evalMetrics.map((m, i) => (
-                <tr key={m.split} style={{ background: i % 2 === 0 ? "transparent" : "#f9fafb" }}>
-                  <td style={{ padding: "6px 14px 6px 0" }}>{m.split}</td>
-                  <td style={{ padding: "6px 14px 6px 0" }}>{m.cases}</td>
-                  <td style={{ padding: "6px 14px 6px 0" }}>{(m.accuracy * 100).toFixed(1)}%</td>
-                  <td style={{ padding: "6px 14px 6px 0" }}>{(m.policy.accuracy * 100).toFixed(1)}%</td>
-                  <td style={{ padding: "6px 14px 6px 0" }}>{(m.semantic.accuracy * 100).toFixed(1)}%</td>
-                  <td style={{ padding: "6px 14px 6px 0" }}>
-                    {m.falseBlocks} (₹{m.falseBlockGmvInr})
-                  </td>
-                  <td style={{ padding: "6px 14px 6px 0" }}>{(m.stepUpRate * 100).toFixed(1)}%</td>
-                  <td style={{ padding: "6px 14px 6px 0" }}>{m.unauthorizedAllows}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        ) : (
-          <p>
-            <b style={{ color: "#dc2626" }}>NOT RUN</b> — run <code>npm run eval:run</code>
-          </p>
-        )}
-      </section>
-    </main>
+        {/* ---------------------------- band 4b · membrane, exit surface */}
+        <TrustBoundary
+          state={exitState}
+          surface="exit"
+          label={
+            exitState === "crossing"
+              ? "authorization seal · open"
+              : exitState === "sealed"
+                ? "authorization seal · sealed"
+                : exitState === "awaiting"
+                  ? "authorization seal · awaiting merchant"
+                  : "authorization seal"
+          }
+          sub={
+            exitState === "crossing"
+              ? "one authorized order crossed · nothing else can"
+              : "only an ALLOW from the gateway opens this surface"
+          }
+        />
+
+        {/* ---------------------------------------------------- band 5 */}
+        <section className="band" id="band-execution">
+          <div className="band__inner">
+            <div
+              className="axis"
+              data-tone={decision?.razorpay_order_id ? "allow" : undefined}
+              style={{ ["--trace" as string]: decision?.razorpay_order_id ? "100%" : "0%" }}
+            >
+              <span className="axis__num">04</span>
+            </div>
+            <div className="band__body">
+              <div className="band__head">
+                <span className="t-zone">authorized execution · razorpay test mode</span>
+                <span className="band__note">
+                  reached only through the gateway&rsquo;s ALLOW branch · sandbox, no real money
+                </span>
+              </div>
+
+              {decision?.razorpay_order_id ? (
+                <RazorpayZone
+                  decision={decision}
+                  order={order}
+                  auditEvents={auditEvents}
+                  busy={isBusy}
+                  reconcileResult={reconcileResult}
+                  reconcileError={reconcileError}
+                  onReconcile={reconcile}
+                />
+              ) : decision?.decision === "BLOCK" ? (
+                <ExecutionAbsent />
+              ) : decision?.decision === "STEP_UP" ? (
+                <ExecutionHeld />
+              ) : (
+                <p className="t-data faint">
+                  RAZORPAY ORDER: <span className="is-block">NOT CREATED</span> — no authorization has been granted.
+                </p>
+              )}
+            </div>
+          </div>
+        </section>
+
+        {/* ---------------------------------------------------- band 6 */}
+        <section className="band" id="band-evidence">
+          <div className="band__inner">
+            <div className="axis" style={{ ["--trace" as string]: "0%" }}>
+              <span className="axis__num">05</span>
+            </div>
+            <div className="band__body">
+              <div className="band__head">
+                <span className="t-zone">evidence</span>
+                <span className="band__note">append-only audit trail · offline evaluation</span>
+              </div>
+
+              <div className="band__head" style={{ marginBottom: 20 }}>
+                <h3 className="t-layer">Audit trail</h3>
+                <span className="band__note">
+                  {auditEvents.length > 0 ? `${auditEvents.length} events · newest last` : "no events yet"}
+                </span>
+              </div>
+              {auditEvents.length > 0 ? (
+                <AuditLedger events={auditEvents} />
+              ) : (
+                <p className="t-data faint">NO EVENTS — nothing has been decided in this session.</p>
+              )}
+
+              <div className="band__head" style={{ marginTop: 72, marginBottom: 20 }}>
+                <h3 className="t-layer">Evaluation</h3>
+                <span className="band__note">offline · zero Razorpay calls</span>
+              </div>
+              <EvidenceStrip metrics={evalMetrics} />
+
+              <p className="method" style={{ marginTop: 64 }}>
+                AI proposes. The gateway authorizes. Razorpay executes. — there is no path in this
+                system where the first of those three reaches the third directly.
+              </p>
+            </div>
+          </div>
+        </section>
+      </main>
+    </>
   )
 }
