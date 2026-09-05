@@ -10,11 +10,11 @@ Only ONE coding agent modifies implementation files at a time. Check `git log`/`
 
 ## Current State
 
-Feature-complete for the Buildathon submission. Phases P0–P15 implemented; Builder queue v2 (B1–B5) complete and reviewed. 59/59 Vitest, `tsc --noEmit` clean, `next build` green, money-path invariant intact, secret sweeps clean, MIT LICENSE present. **All remaining work is human-only** (deploy resources, webhook registration, video, GitHub push) — no code task is currently assigned to any builder.
+Feature-complete for the Buildathon submission. Phases P0–P15 implemented; queue v2 (B1–B5) complete and reviewed; queue v3 in progress (C1 accepted). **61/61 Vitest**, `tsc --noEmit` clean, money-path invariant intact (one `createOrder` call, `src/gateway/decide.ts:369`), secret sweeps clean, MIT LICENSE present. Single-use intents are now enforced by an atomic claim rather than a read-then-write. Remaining agent work: C2 then C3; everything after that is human-only (Neon/Vercel provisioning, webhook registration, video, GitHub push).
 
 ## Active Agent
 
-**None implementing.** opus-think last acted (review + this board). Next builder assignment requires a new task in `HANDOFF.md`.
+**sonnetCode** — C2 is unblocked and assigned (see `HANDOFF.md`). opusCode has stopped after C1; it must not re-enter the repo while sonnetCode holds C2.
 
 ## Completed Work
 
@@ -25,7 +25,7 @@ Feature-complete for the Buildathon submission. Phases P0–P15 implemented; Bui
 | B3 | Deploy readiness (Neon/Vercel, config only) | builder | `1ee390a` | [COMPLETE] accepted |
 | B4 | Demo presentability pass (styles only) | builder | `1dd5aa5` | [COMPLETE] accepted (see Verification) |
 | B5 | Public-repo hygiene (LICENSE, limitations, sweeps) | builder | `6c42c76` | [COMPLETE] accepted |
-| C1 | Atomic single-use intent claim (F5, money-path concurrency) | opusCode | `a6f673a` | [REVIEW] opus-think pending |
+| C1 | Atomic single-use intent claim (F5, money-path concurrency) | opusCode | `a6f673a` | [COMPLETE] opus-think ACCEPTED (regression independently re-verified) |
 
 Earlier: judge confidence calibration `0427fe7`; TOCTOU + single-use intent fix (Opus, verified by Fable); derived Postgres schema `af2d01a`.
 
@@ -33,12 +33,12 @@ Earlier: judge confidence calibration `0427fe7`; TOCTOU + single-use intent fix 
 
 **Builder queue v3 active** (`HANDOFF.md`), from agy findings F4–F7. Strictly serial, one coding agent at a time:
 
-- **[REVIEW] C1 — atomic single-use intent claim (F5)** · owner: **opusCode** · money-path concurrency · implemented in `a6f673a`, awaiting opus-think acceptance
-- **[BLOCKED on C1 review] C2 — revalidate parent session in `approveStepUp` (F6)** · owner: sonnetCode
+- **[COMPLETE] C1 — atomic single-use intent claim (F5)** · owner: opusCode · `a6f673a` · **ACCEPTED by opus-think** after independent diff review, re-run verification, and a stash-and-run confirmation that both new tests fail against pre-C1 source
+- **[ACTIVE] C2 — revalidate parent session in `approveStepUp` (F6)** · owner: **sonnetCode** · unblocked 2026-09-05
 - **[BLOCKED on C2] C3 — deployment-safe Prisma generation (F4) + stale command (F7)** · owner: sonnetCode
 - **[QUEUED] agy re-audit of C1–C3** — QA only
 
-C1 and C2 both edit `src/gateway/decide.ts`; C2 must not start until C1 is committed and reviewed by opus-think.
+C1 and C2 both edit `src/gateway/decide.ts`. C1 is done and accepted, so C2 may proceed — but C3 must not start until C2 is committed and reviewed.
 
 ## Important Decisions
 
@@ -46,7 +46,7 @@ Durable decisions future agents must not re-litigate (full history in `HANDOFF.m
 
 - **Only `src/gateway/decide.ts` may reach `createOrder`.** Verified by grep every session. No production path may create a Razorpay Order elsewhere.
 - **Idempotency key == replay key** = `intent_id + sha256(canonical cart, items sorted by sku)`. An existing order for that key returns the same ALLOW + order id (idempotent), not `REPLAY_DETECTED`.
-- **Intents are single-use.** `markIntentConsumed` runs after successful order creation. `requestCheckout` blocks new carts on a CONSUMED intent; `approveStepUp` does the same, but *after* its `existingOrder` lookup so idempotent re-approval still works.
+- **Intents are single-use, enforced by an ATOMIC CLAIM** (`claimIntent`, `updateMany` with `status: "ACTIVE"` in the `WHERE`), taken as the first statement of `executeAllow` — before the authorization row and before `createOrder`. `count === 1` wins; the loser gets an audited `BLOCK`/`REPLAY_DETECTED`. There is deliberately **no unconditional "mark consumed" helper** — one cannot distinguish a winner from a loser, and reintroducing it would reopen F5. The CONSUMED pre-checks in `requestCheckout`/`approveStepUp` remain as fast paths only; they are reads and must never be treated as the enforcement point. Same-intent+same-cart retries return at the `existingOrder` lookup and never reach the claim.
 - **Intent expiry source of truth is the DB row (`expiresAt`)**, never the stored contract JSON.
 - **Policy failures never invoke the judge** (quota + clean causal story). Judge failure → STEP_UP, never ALLOW.
 - **Eval ground truth is deterministic templates only.** Gemini judges cases but never defines correctness. Eval module tree imports no Razorpay code.
@@ -70,7 +70,7 @@ Canonical DB-verified ids for the real captured payment: **`order_TYFPRIpLlJeFpf
 
 **F5 — Cross-cart concurrency TOCTOU on single-use intents** · severity: HIGH (money path) · discovered by: agy · 2026-09-05 · `src/gateway/decide.ts` `executeAllow`, `src/gateway/session.ts` · **status: FIXED (`a6f673a`), verified by regression test + code inspection — see Verification Evidence for what the test does and does not prove.**
 `getIntentStatus()` is a plain read; `markIntentConsumed()` is an unconditional `update` that runs **after** `createOrder` returns. The read-to-write window therefore spans a network round trip to Razorpay. Two concurrent approvals for two *different* carts on one ACTIVE intent both observe ACTIVE, compute *different* replay keys (so both reservations succeed), and both reach `createOrder` → **two real Orders from a single-use intent.** The B1 fix (F1) closed only the *sequential* case; its passing test is not coverage for this. Amplified by D3 (the approve endpoint is unauthenticated). Fix direction decided: atomic conditional transition (`updateMany` with `status: "ACTIVE"` in the `WHERE`) performed **before** `createOrder`, in `executeAllow` — the single point both `requestCheckout` and `approveStepUp` funnel through. A check-before-write fix is explicitly not acceptable.
-*Fix as landed:* `claimIntent()` in `src/gateway/session.ts` performs `updateMany({ where: { id, status: "ACTIVE" }, data: { status: "CONSUMED" } })` and returns `count === 1`; `executeAllow` calls it as its first statement — before the authorization row, before `createOrder`. The loser returns an audited `BLOCK`/`REPLAY_DETECTED`, never a throw. The old unconditional `markIntentConsumed` was **deleted rather than left in place**: an unconditional update cannot distinguish a winner from a loser, so leaving it available would invite the bug back. A bounded compensating revert (`releaseIntentClaim`, CONSUMED → ACTIVE, only when the intent has zero `razorpayOrder` rows) runs in the `RazorpayApiError` branch so a failed Razorpay call does not strand the intent.
+*Fix as landed (commit `a6f673a`):* `claimIntent()` in `src/gateway/session.ts` performs `updateMany({ where: { id, status: "ACTIVE" }, data: { status: "CONSUMED" } })` and returns `count === 1`; `executeAllow` calls it as its first statement — before the authorization row, before `createOrder`. The loser returns an audited `BLOCK`/`REPLAY_DETECTED`, never a throw. The old unconditional `markIntentConsumed` was **deleted rather than left in place**: an unconditional update cannot distinguish a winner from a loser, so leaving it available would invite the bug back. A bounded compensating revert (`releaseIntentClaim`, CONSUMED → ACTIVE, only when the intent has zero `razorpayOrder` rows) runs in the `RazorpayApiError` branch so a failed Razorpay call does not strand the intent.
 
 **F6 — `approveStepUp` does not revalidate the parent session** · severity: MEDIUM · discovered by: agy · 2026-09-05 · `src/gateway/decide.ts` · **status: CONFIRMED by opus-think, assigned C2 → sonnetCode.**
 `requestCheckout` enforces L1 session status + expiry; `approveStepUp` checks only intent expiry, so a STEP_UP raised under a since-expired or deactivated session can still be approved into a real Order. The function's own docstring claims it "re-runs L1/L2; does not skip checks" — currently false. Approval must not be a weaker door into the money path than the front door.
@@ -78,7 +78,7 @@ Canonical DB-verified ids for the real captured payment: **`order_TYFPRIpLlJeFpf
 **F7 — Stale deploy command printed by `gen_pg_schema.ts`** · severity: LOW · discovered by: agy · 2026-09-05 · `scripts/gen_pg_schema.ts` (~line 20) · **status: CONFIRMED, bundled into C3.**
 Prints `prisma migrate deploy` as the deploy usage, contradicting the decided Neon strategy (`prisma db push`). Wrong instruction surfaced at exactly the moment someone is deploying — the SQLite-dialect migrations must never run against Postgres.
 
-**F8 — Losing `approveStepUp` leaves its authorization row `APPROVED` with no order** · severity: COSMETIC (no money impact) · discovered by: opusCode while implementing C1 · 2026-09-05 · `src/gateway/decide.ts` `approveStepUp` · **status: REPORTED, deliberately NOT fixed in C1 (out of assigned scope).**
+**F8 — Losing `approveStepUp` leaves its authorization row `APPROVED` with no order** · severity: COSMETIC (no money impact) · discovered by: opusCode while implementing C1 · 2026-09-05 · `src/gateway/decide.ts` `approveStepUp` · **status: DEFERRED as D4 by opus-think — recommendation accepted after independent analysis (see D4).**
 `approveStepUp` sets the row to `APPROVED` *before* calling `executeAllow`. If that call then loses the atomic claim, the row stays `APPROVED` even though no order was created (the BLOCK is recorded on a separate row by `persistDecision`). No money impact and it fails closed — re-approving that row passes the entry guard, finds no existing order, hits the CONSUMED pre-check, is marked `REJECTED` and throws. Same family as D2. opus-think to decide whether it is worth a money-path edit before submission; opusCode's recommendation is **no**.
 
 ## Deferred Issues
@@ -86,6 +86,8 @@ Prints `prisma migrate deploy` as the deploy usage, contradicting the decided Ne
 **D1 — Replay-reservation wart** · severity: LOW · A Razorpay API failure *after* `reserveReplayKey` succeeds leaves that exact intent+cart pair permanently unretryable (the key is reserved but no order exists). Fail-closed and safe; costs one retry path. Documented in README Limitations. Not fixed — the compensating-delete would add a failure mode to the money path for a demo-irrelevant edge case. **Still open after C1, and only PARTIALLY mitigated by it:** C1's compensating revert releases the *intent* (CONSUMED → ACTIVE) when no order row exists, so the intent is reusable with a different cart — but the `ReplayKey` row is a separate row and is not deleted, so that exact intent+cart pair remains unretryable. Do not describe D1 as closed.
 
 **D2 — Same-cart second STEP_UP row lingers** · severity: COSMETIC · If two STEP_UP authorizations exist for the *same* cart, approving the second returns the first's order via the `existingOrder` path without updating the second row's status, so it still shows `STEP_UP` in the UI. No money impact: same cart → same replay key → one order. Not fixed; not worth a money-path edit pre-submission.
+
+**D4 — Losing concurrent `approveStepUp` leaves an `APPROVED` row with no order (F8)** · severity: COSMETIC · **DEFERRED by opus-think after tracing the state machine, not on opusCode's recommendation alone.** `approveStepUp` sets its row `APPROVED` before calling `executeAllow`; if that call then loses the atomic claim, the row stays `APPROVED` while the actual BLOCK is recorded on a separate row. **Why this is safe, verified by code inspection:** re-approving that row passes the entry guard (`APPROVED` is allowed), finds no `existingOrder` (none was ever created), hits the CONSUMED pre-check, is marked `REJECTED`, and throws — it self-heals on the next attempt and can never mint an order. The one path where it proceeds is if the winner's Razorpay call failed and released the intent back to ACTIVE — in which case it is a legitimate merchant-approved STEP_UP for an unused intent, and still yields exactly one order. **Not fixed because:** the fix is an edit to the money path (moving or compensating a status write in `approveStepUp`) to correct a UI label in a state only reachable under concurrent approvals — a scenario that is not on the demo path. Editing `decide.ts` again before submission carries more risk than the cosmetic inconsistency it would remove. Revisit only if the approve endpoint ever gains real concurrent users.
 
 **D3 — Approve endpoint is unauthenticated** · `POST /api/checkout/approve` has no merchant auth — deliberate for a single-merchant demo; production would bind it to a merchant session. Documented in README Limitations rather than hidden.
 
@@ -98,6 +100,7 @@ Independently re-run by opus-think after B5 (2026-09-05), not taken on the build
 - **B1 regression proves the security property**, not just coverage: one intent → two different carts → both STEP_UP → approve #1 yields an order → approve #2 throws `AUTHORIZATION_NOT_APPROVABLE` with `createOrder` called **exactly once** and auth #2 marked `REJECTED` → re-approving #1 returns the *same* order id, still one call.
 - **C1 concurrency regression — 61/61 tests, and the honesty statement the task required.** Two new tests in `tests/decide.test.ts`: `C1: two CONCURRENT approveStepUp calls on different carts of one intent create exactly one order` and `C1: two CONCURRENT requestCheckout calls on different carts of one intent create exactly one order`. Both fire the two flows with `Promise.all`/`Promise.allSettled`, and both assert `createOrder` called **exactly once** and `razorpayOrder.count({intentId}) === 1`.
   - **These tests are a real regression test, VERIFIED BY TEST:** the source was stashed and the suite re-run against the pre-C1 code — both fail there, with `createOrder` reached twice for a single intent. They are not coverage theatre.
+  - **Independently re-verified by opus-think (2026-09-05), not accepted on the builder's report:** `src/gateway/decide.ts` and `src/gateway/session.ts` were temporarily reverted to `d09f694` in the working tree and only the two `C1:` tests were run — **both fail against the pre-C1 source**, then the tree was restored (`git status` clean). **Precision correction to opusCode's evidence:** the pre-C1 failure of the concurrent-`approveStepUp` test is an unhandled `PrismaClientKnownRequestError` escaping to the caller — i.e. the pre-C1 loser produced a raw DB error (a 500), not a clean second `createOrder` as the commit message describes. The regression property holds and the pre-C1 behaviour is if anything worse than reported; the characterisation of *how* it failed was imprecise.
   - **They are NOT a true OS-level race reproduction — do not claim they are.** Node is single-threaded, Prisma multiplexes the queries, and SQLite serializes writers with a file lock, so the interleaving is deterministic. What they prove is that the guard's *logic* holds when the two flows interleave. That the claim itself is *atomic* rests on it being one conditional `UPDATE` with the status in the `WHERE` clause, which SQLite and Postgres both serialize — **VERIFIED BY CODE INSPECTION, not by this test.**
 - **Secret sweeps clean** (re-run independently): no `.env` or `*.db` path ever tracked in any commit; no literal `rzp_test_` key value in tracked non-markdown files; no `AIza…` Gemini key anywhere tracked.
 - **B4 is styles-only — VERIFIED BY CODE INSPECTION**, not by claim: the diff over `app/` contains no `fetch`, `useState`/`useEffect`, `await`, setter, or JSX-conditional lines.

@@ -213,7 +213,11 @@ HUMAN CHECKPOINT: none for C1.
 
 ---
 
-## C2 — Revalidate parent session in `approveStepUp` (F6) → **sonnetCode** [BLOCKED on C1 review]
+**C1 REVIEWED BY opus-think 2026-09-05 — ACCEPTED (`a6f673a`).** Verified independently, not on the builder's report: 61/61 tests, `tsc` clean, exactly one `createOrder` call site (`decide.ts:369`), exactly one `claimIntent` call site, `markIntentConsumed` fully removed from the codebase, working tree clean. **Regression re-verified by opus-think**: `src/gateway/{decide,session}.ts` were temporarily reverted to `d09f694` and only the `C1:` tests run — both fail against pre-C1 source; tree then restored clean. *Correction to the builder's evidence:* the pre-C1 failure of the concurrent-`approveStepUp` test is an unhandled `PrismaClientKnownRequestError` reaching the caller (a 500), not a clean second `createOrder`. The regression property holds; the described failure shape was imprecise, and the real pre-C1 behaviour was worse. F8 raised by opusCode is **deferred as D4** (see `docs/AGENTS.md`) — no money impact, self-heals, and the fix would be a money-path edit to correct a UI label in a state unreachable on the demo path.
+
+---
+
+## C2 — Revalidate parent session in `approveStepUp` (F6) → **sonnetCode** [ACTIVE — unblocked 2026-09-05]
 
 FROM: opus-think
 TO: sonnetCode
@@ -231,6 +235,13 @@ CONSTRAINTS: no new `createOrder` path; do not weaken any existing check; do not
 VERIFICATION: `npm run typecheck && npm test`; new regression test — STEP_UP raised, session then forced expired/inactive in the DB, approval rejected, `createOrder` never called. Money-path grep clean.
 EVIDENCE: commit hash, test name, confirmation the API route returns the correct status code (not 500).
 HUMAN CHECKPOINT: none.
+
+**Additional constraints added by opus-think when unblocking C2 (2026-09-05), because C1 just landed in this same function:**
+- **Do not touch the C1 atomic claim.** `claimIntent` must remain the first statement of `executeAllow`, and there must remain exactly ONE `claimIntent` call site. Do not reintroduce any unconditional "mark consumed" helper — that is what F5 was.
+- Your session check belongs with the other **L1 revalidation in `approveStepUp`** (near the existing intent-expiry check, before the replay/reservation work) — **not** inside `executeAllow`, which is shared with `requestCheckout` and already validates the session on that path. Adding it to `executeAllow` would double-check one path and change the shared money funnel; don't.
+- Confirm by reading that your check runs **before** `prisma.authorizationDecision.update({ status: "APPROVED" })`, so a rejected approval does not leave an APPROVED row (that is D4/F8; don't make it worse).
+- Report the money-path grep in your evidence: it must still show exactly one real `createOrder` call in `decide.ts`, and `grep -rn "claimIntent" src/` must still show one call site.
+- Verify `tests/idempotency.test.ts` and the two `C1:` tests still pass — they build their own sessions, so a stricter session check can break them. If they fail, the fix is your test fixtures, **not** loosening the check.
 
 ---
 
