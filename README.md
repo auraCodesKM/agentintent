@@ -4,7 +4,7 @@
 
 ### Only the gateway can pay.
 
-**A merchant-side authorization gateway that sits between an AI buyer and Razorpay.**
+A merchant-side authorization gateway between an AI buyer and Razorpay.
 
 There is an AI buyer. There is an AI judge. There is no AI cashier.
 The model can propose. The gateway decides. Only the gateway can pay.
@@ -19,373 +19,291 @@ The model can propose. The gateway decides. Only the gateway can pay.
 [![Vitest](https://img.shields.io/badge/Vitest-64%2F64_passing-6E9F18?style=flat-square&logo=vitest&logoColor=white)](https://vitest.dev)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg?style=flat-square)](./LICENSE)
 
-Razorpay AI Buildathon 2026 — **Track 1: AI Growth & Agentic Commerce**
+Razorpay AI Buildathon 2026 · Track 1: AI Growth & Agentic Commerce
 
-`64/64 tests` · `240-case evaluation, 100% held-out` · `0 unauthorized allows` · `1 code path to money` · Razorpay Test Mode only
+`64/64 tests` · `240 eval cases, 100% held-out` · `0 unauthorized allows` · `1 code path to money`
 
-[Live demo](#-verify-it-yourself-in-five-minutes) · [Architecture](#-the-boundary) · [Security](#-security-properties) · [Evaluation](#-measured-results) · [Setup](#-setup) · [API](#-api-surface)
+</div>
 
-### [▶ Watch the 5-minute pitch](https://www.canva.com/design/DAHUWuDXu9s/8pJTK7gbfEOiqFOqO93qYA/watch)
+<div align="center" style="position: relative; width: 100%; height: 0; padding-top: 56.25%; box-shadow: 0 2px 8px 0 rgba(63,69,81,0.16); margin-top: 1.6em; margin-bottom: 0.9em; overflow: hidden; border-radius: 8px;">
+  <iframe loading="lazy" style="position: absolute; width: 100%; height: 100%; top: 0; left: 0; border: none;"
+    src="https://www.canva.com/design/DAHUWuDXu9s/8pJTK7gbfEOiqFOqO93qYA/watch?embed"
+    allowfullscreen="allowfullscreen" allow="fullscreen"></iframe>
+</div>
 
-Problem → real ALLOW with a Dashboard-visible order → real BLOCK with zero Razorpay objects created → webhook death and recovery → the evaluation numbers below, live.
-*(GitHub strips `<iframe>` from rendered READMEs — this is a direct link to the same video, not a downgrade.)*
+<div align="center">
+
+[**Watch on Canva ↗**](https://www.canva.com/design/DAHUWuDXu9s/8pJTK7gbfEOiqFOqO93qYA/watch) — the embed above won't autoplay on github.com (iframes are stripped there); it plays inline in VS Code, Cursor, and any renderer that isn't github.com's own sanitizer.
 
 </div>
 
 ---
 
-## Table of contents
+**What a reviewer needs to know, in order:**
 
-- [The problem, concretely](#the-problem-concretely)
-- [The boundary](#-the-boundary)
-- [Design decisions — and what we rejected](#-design-decisions--and-what-we-rejected)
-- [Verify it yourself in five minutes](#-verify-it-yourself-in-five-minutes)
-- [Security properties](#-security-properties)
-- [Measured results](#-measured-results)
-- [Real Razorpay artifacts](#-real-razorpay-artifacts)
-- [Failure handling, demonstrated](#-failure-handling-demonstrated)
-- [API surface](#-api-surface)
-- [Setup](#-setup)
-- [Tech stack](#-tech-stack)
-- [Repository layout](#-repository-layout)
-- [What broke during development](#-what-broke-during-development)
-- [Limitations](#-limitations)
-- [License](#-license)
+1. [30-second architecture](#architecture) — one diagram, what crosses the boundary and what never does
+2. [Run it yourself](#run-it-yourself) — clone → keys → three prompts → three real outcomes
+3. [Why it's built this way](#design-decisions) — seven forks, what we rejected, why
+4. [Proof, not claims](#security) · [Numbers](#evaluation) · [Real Razorpay ids](#real-artifacts)
 
 ---
 
-## The problem, concretely
-
-Agentic commerce removes the human from the checkout loop:
+## The problem
 
 ```
-human states intent → AI picks product → AI proposes cart → payment
+human states intent  →  AI picks a product  →  AI proposes a cart  →  payment
 ```
 
-A payment API cannot tell the difference between these:
+A payment API can't see the difference between these:
 
-| The user said | The agent proposed | A plain payment API |
+| User asked for | Agent proposed | Plain payment API does |
 | --- | --- | --- |
-| "headphones under ₹8,000" | `HP-005` — ₹13,999 | charges ₹13,999 |
+| headphones under ₹8,000 | `HP-005`, ₹13,999 | charges ₹13,999 |
 | "nothing with a screen" | a tablet | charges for the tablet |
-| one intent, one purchase | the same intent, twice, concurrently | creates two orders |
+| one purchase | the same intent, twice, concurrently | two orders |
 
-The card network sees a valid transaction in every case. The *merchant* is the only party who knows the purchase violated the terms the buyer was given — and by then the money has moved.
-
-**AgentIntent puts a deterministic authorization boundary in front of the payment API.** The agent may search, inspect and propose. It may not price, authorize, or pay.
+The merchant is the only party who knows the purchase violated the terms — and by then the money moved. AgentIntent puts a deterministic gate in front of the payment call. The agent can search, inspect, propose. It cannot price, authorize, or pay.
 
 ---
 
-## 🧭 The boundary
+## Architecture
 
 ```mermaid
 flowchart TD
-    U["👤 User\nnatural language"] --> IC["🧠 Intent Compiler\nGemini + Zod, fail-closed"]
-    IC -->|typed contract\nserver owns id · expiry · merchant| BUY["🤖 Buyer Agent\nGemini, ≤8 turns\nsearch · inspect · propose"]
-    BUY -->|"request_checkout\n(proposal, not payment)"| GW
+    U["User — natural language"] --> IC["Intent Compiler\nGemini + Zod, fail-closed"]
+    IC -->|"typed contract\nserver owns id · expiry · merchant"| BUY["Buyer Agent\nGemini, max 8 turns\nsearch · inspect · propose"]
+    BUY -->|"request_checkout\n(a proposal, not a payment)"| GW
 
-    subgraph GW["🔒 GATEWAY — src/gateway/decide.ts — the ONLY path to createOrder"]
+    subgraph GW["GATEWAY — src/gateway/decide.ts — the ONLY path to createOrder"]
         direction TB
-        L1["L1 · session · expiry · merchant binding · replay · single-use"]
-        L2["L2 · deterministic policy over the SERVER-priced cart"]
-        L3["L3 · semantic judge — canonical fields only, never description"]
-        L4["L4 · ALLOW · STEP_UP · BLOCK"]
+        L1["L1  session · expiry · merchant · replay · single-use"]
+        L2["L2  deterministic policy, server-priced cart"]
+        L3["L3  semantic judge — canonical fields only"]
+        L4["L4  ALLOW · STEP_UP · BLOCK"]
         L1 --> L2 --> L3 --> L4
     end
 
-    GW -->|ALLOW only| RP["💳 Razorpay Orders API (Test Mode)\nCheckout.js → server-side signature verify"]
-    RP --> WH["Webhook (raw-body HMAC + dedupe)\n— or —\nAPI-poll reconcile"]
-    WH --> AUDIT["📒 Append-only audit trail\n+ offline evaluation (240 cases, 0 Razorpay calls)"]
+    GW -->|ALLOW only| RP["Razorpay Orders API (Test Mode)\nCheckout.js → server-side signature verify"]
+    RP --> WH["Webhook: raw-body HMAC + dedupe\n— or —\nAPI-poll reconcile"]
+    WH --> AUDIT["Append-only audit trail\n+ 240-case offline evaluation, 0 Razorpay calls"]
 
     style GW fill:#0B0B0C,color:#FAFAF8,stroke:#0F7B4F,stroke-width:2px
     style L4 fill:#0F7B4F,color:#FAFAF8
     style RP fill:#1B3BD8,color:#FAFAF8
 ```
 
-Three things never cross that boundary: **Razorpay credentials** (the buyer and the judge never hold them; the browser gets only the public key id), **agent-authored prices** (`priceCart` re-prices every cart from the server catalog), and **free-text product descriptions** (the judge payload omits them — one catalog SKU carries a deliberately poisoned description as a live fixture).
+**Never crosses the boundary:** Razorpay credentials (buyer/judge never hold them) · agent-authored prices (`priceCart` re-prices every cart server-side) · raw product descriptions (judge sees canonical fields only — one SKU carries a live prompt-injection fixture to prove it).
 
-### How a decision is actually made
-
-| Layer | Runs | Decides on | Failure becomes |
+| Layer | Runs | Decides | On failure |
 | --- | --- | --- | --- |
-| **L1** | always | session active, intent unexpired, merchant bound, not replayed, intent unconsumed | `BLOCK` |
-| **L2** | if L1 passed | amount, quantity, category — against canonical server prices | `BLOCK` |
-| **L3** | **only if L1+L2 passed** | does this cart satisfy what the user actually asked for? | `BLOCK` or `STEP_UP` |
-| **L4** | always | combines the above into one authorization | `ALLOW` / `STEP_UP` / `BLOCK` |
+| L1 | always | session, expiry, merchant, replay | `BLOCK` |
+| L2 | if L1 passed | amount, quantity, category vs. server price | `BLOCK` |
+| L3 | only if L1+L2 passed | does the cart match what the user asked for? | `BLOCK` / `STEP_UP` |
+| L4 | always | combines all three into one decision | `ALLOW` / `STEP_UP` / `BLOCK` |
 
-L3 runs last and never runs after a deterministic failure — **a policy violation never reaches the model**. The judge returns a verdict and a confidence; the gateway *consumes it as data*. It cannot raise a limit, overturn L2, or turn a `BLOCK` into an `ALLOW`. Confidence below `0.85` escalates to a human instead of resolving itself.
-
----
-
-## 🧠 Design decisions — and what we rejected
-
-Every non-obvious choice below was a real fork, not a default. The rejected side is included because a design that never explains what it turned down is a design that hasn't been stress-tested.
-
-| Decision | We rejected | Because |
-| --- | --- | --- |
-| **Hand-written 8-turn buyer loop** | LangChain / CrewAI / a generic agent framework | Generic frameworks make `create_order` look like just another selectable tool. Money authority cannot live inside a runtime the model steers. Writing the loop ourselves (~120 lines) keeps the one dangerous edge — `request_checkout` — visible and auditable, not buried in a library's tool-dispatch internals. |
-| **REST for the gateway, not MCP** | Razorpay's MCP server, which already exposes payment tools to AI clients | MCP is capability *exposure* — exactly the opposite of what an authorization boundary needs. Giving the buyer an MCP `create_order` tool puts the governed action in the model's toolset. A future MCP adapter could sit *behind* an ALLOW; it must never sit in front of one. |
-| **Confidence threshold escalates to a human, not to a retry** | Re-prompting the judge until confidence clears 0.85 | Re-prompting to reach a threshold is p-hacking your own safety check — you're not more certain, you've just asked until the model said what you wanted. Low confidence is real information; it goes to `STEP_UP`, not to a second dice roll. |
-| **Atomic single-row claim, not a lock/mutex** | An in-memory mutex or a distributed lock (Redis, etc.) | A mutex only protects one process; this runs on serverless, where "one process" isn't guaranteed. One conditional `UPDATE … WHERE status = 'ACTIVE'` pushes the exclusion into the database's own write lock — correct under concurrency without adding infrastructure. |
-| **Judge sees canonical fields only, never `description`** | Passing the full catalog record for "richer context" | Free-text fields are where prompt injection lives. `HP-007`'s description is a live poisoned fixture proving the judge never sees it — richer context wasn't worth an unbounded attack surface for a field the decision doesn't need. |
-| **Deterministic eval ground truth, Gemini judges but never grades itself** | Using the judge's own verdicts as the accuracy baseline | An evaluation where the model defines correctness always converges to "the model is right." Ground truth comes from fixture templates that exist independent of any model call — the 100% held-out figure means something because of this, not despite it. |
-| **SQLite locally, Postgres only in deploy** | One database everywhere, for "consistency" | Local dev shouldn't need a hosted database to run `npm test`. The cost is one extra deploy step (`prisma db push` against Neon) — documented in `docs/DEPLOY.md` — in exchange for zero-setup contribution. |
+A policy failure never reaches the model. The judge's verdict is consumed as data — it cannot raise a limit or turn a `BLOCK` into an `ALLOW`. Confidence under `0.85` goes to a human, not to a retry.
 
 ---
 
-## 🚀 Verify it yourself in five minutes
+## Run it yourself
 
 ```bash
-git clone https://github.com/auraCodesKM/agentintent.git
-cd agentintent
-npm install && cp .env.example .env    # fill in keys — see "Get your API keys" below
+git clone https://github.com/auraCodesKM/agentintent.git && cd agentintent
+npm install && cp .env.example .env
 npm run seed
-npm run dev                            # → http://localhost:3000/demo
+npm run dev   # → localhost:3000/demo
 ```
 
-### Get your API keys
+**Get keys — 2 minutes, no card, sandbox only:**
 
-| Key | Get it here | Cost |
+| Key | Get it | Free tier |
 | --- | --- | --- |
-| `GEMINI_API_KEY` | [aistudio.google.com/apikey](https://aistudio.google.com/apikey) — sign in, click **Create API key** | Free tier, 500 req/day on `-flash-lite` models |
-| `RAZORPAY_KEY_ID` / `RAZORPAY_KEY_SECRET` | [dashboard.razorpay.com/app/keys](https://dashboard.razorpay.com/app/keys) — toggle **Test Mode** (top-right), **Generate Test Key** | Free, sandbox only |
-| `RAZORPAY_WEBHOOK_SECRET` | [dashboard.razorpay.com/app/webhooks](https://dashboard.razorpay.com/app/webhooks) — **Add New Webhook**, subscribe to `payment.captured`, `payment.failed`, `order.paid` | Free |
+| `GEMINI_API_KEY` | [aistudio.google.com/apikey](https://aistudio.google.com/apikey) → Create API key | 500 req/day |
+| `RAZORPAY_KEY_ID` / `_SECRET` | [dashboard.razorpay.com/app/keys](https://dashboard.razorpay.com/app/keys) → toggle Test Mode → Generate Key | unlimited |
+| `RAZORPAY_WEBHOOK_SECRET` | [dashboard.razorpay.com/app/webhooks](https://dashboard.razorpay.com/app/webhooks) → Add Webhook | unlimited |
 
-No card, no live-mode activation, and no real money anywhere in this setup — Test Mode keys are sufficient for everything in this repo.
+**Run these three prompts on `/demo`** — each hits real Gemini + the real gateway:
 
-### Run the three decision states
+| Prompt | Result | Proves |
+| --- | --- | --- |
+| *"StudioMax Reference headphones, budget ₹8,000 max"* | `BLOCK` · `SEMANTIC_MISMATCH` | agent substituted a product, judge caught it, `0 ORDERS CREATED` |
+| *"good noise-cancelling headphones under ₹8,000, one pair"* | `ALLOW` · real `order_…` | shows up in your Razorpay Dashboard |
+| *"something nice for my desk, keep it reasonable"* | `STEP_UP` · `SEMANTIC_LOW_CONFIDENCE` | escalated to merchant, no order until approved |
 
-On `/demo`, run these three prompts in order. Each one exercises the real pipeline — real Gemini calls, real gateway, real Razorpay Test Mode.
+Test UPI: `success@razorpay` / `failure@razorpay`.
 
-| # | Prompt | Expected | What it proves |
-| --- | --- | --- | --- |
-| 1 | `Buy me the StudioMax Reference headphones. My budget is ₹8,000 maximum.` | **BLOCK** · `SEMANTIC_MISMATCH` | The agent substituted a product; the judge caught it. Razorpay is never contacted — `0 ORDERS CREATED`. |
-| 2 | `Buy me a pair of good noise-cancelling headphones under ₹8,000. One pair only.` | **ALLOW** · real `order_…` | The legitimate path. A real Test Mode Order appears in your Razorpay Dashboard. |
-| 3 | `Get me something nice for my desk setup, keep it reasonable.` | **STEP_UP** · `SEMANTIC_LOW_CONFIDENCE` | Ambiguity is escalated to a merchant, not silently authorized. No order exists until you approve. |
-
-Test payments: UPI `success@razorpay` / `failure@razorpay`.
-
-### Then, without writing any code
+**Then, no code required:**
 
 ```bash
-npm run typecheck                 # tsc --noEmit
-npm test                          # 64 tests
-npm run eval:run                  # 240-case offline eval — creates ZERO Razorpay orders
-npm run demo:webhook-fail         # webhook death → API-poll recovery, still one order
+npm run typecheck        # clean
+npm test                 # 64 tests
+npm run eval:run         # 240 cases, offline, ZERO Razorpay orders
+npm run demo:webhook-fail # kill the webhook, watch it recover
 ```
 
-Or click **Run evaluation** directly on `/demo` — it executes a real, deterministic 27-case sample of the held-out split live in the browser (same evaluation module the CLI runs, 0 Razorpay calls, ~28 seconds).
-
-**The single invariant, checkable in one command:**
+Or click **Run evaluation** on `/demo` itself — runs a real, deterministic 27-case sample of the held-out split live in the browser, ~28s, 0 Razorpay calls.
 
 ```bash
-grep -rn "await createOrder(" src/ app/ --include="*.ts" --include="*.tsx" | grep -v "razorpay/orders"
-# → src/gateway/decide.ts:397     (exactly one hit, and it is inside the ALLOW path)
+# the one invariant that matters, checkable in one line:
+grep -rn "await createOrder(" src/ app/ | grep -v "razorpay/orders"
+# → src/gateway/decide.ts:397   (exactly one hit)
 ```
 
 ---
 
-## 🛡 Security properties
+## Design decisions
 
-Each is an engineering decision with a specific mechanism, not a claim. File references are the proof.
+Every row is a real fork. The rejected side is included on purpose — a design that never names what it turned down hasn't been pressure-tested.
 
-**One path to money.** Only `src/gateway/decide.ts` may call `createOrder`. Nothing else in the application — not the compiler, not the buyer, not the judge, not an API route — can create a Razorpay object.
-
-**Single-use intents, enforced atomically.** An intent authorizes at most one Order. This is deliberately *not* a read-then-write check, which two concurrent requests can both pass: it is one conditional `UPDATE … WHERE status = 'ACTIVE'`, executed as the first statement of `executeAllow`, **before** the Razorpay call. The database's own write lock picks exactly one winner; the loser receives an audited `BLOCK`, never a second Order and never a raw 500. Regression-tested with concurrent `Promise.all` approvals asserting `createOrder` is called exactly once.
-
-**Approval is not a weaker door than checkout.** `requestCheckout` validates session status, expiry and merchant binding. The merchant-approval path for a STEP_UP re-validates all three, so a STEP_UP raised under a session that has since expired, been deactivated, or been rebound to another merchant cannot be approved into a real Order.
-
-**Carts are server-priced.** The buyer proposes SKUs and quantities. The gateway looks up price, category and attributes from the catalog itself. A client can suggest a cart; it cannot suggest a price.
-
-**The judge cannot see what it shouldn't.** `buildJudgePayload` sends canonical fields only — SKU, category, quantity, price. Catalog `description` is never included; SKU `HP-007` carries a prompt-injection payload in its description as a permanent fixture, and eval class G proves it never reaches a decision. Enforced by `tests/judge-payload.test.ts`.
-
-**Replay and idempotency are one key with two behaviours.** The key is `intent_id + sha256(canonical cart)`. Repeating an *already-authorized* intent+cart returns the **same** Order — idempotent and safe to retry. A *different* cart on an already-consumed intent is refused as `REPLAY_DETECTED`. The unique constraint, not an earlier read, decides who won.
-
-**Every failure path fails closed.** A judge outage, a malformed model response, a Zod violation or a Razorpay API error each resolve to `STEP_UP` or `BLOCK`. There is no "let it through on error" branch anywhere in the authorization boundary.
-
-**Webhooks are verified, deduped and recoverable.** Signatures are checked over the **raw** request body — never re-serialized JSON — before anything else runs. The Razorpay event id is persisted *before* any side effect, so retried deliveries are 200-OK no-ops. If a webhook never arrives, `POST /api/orders/:id/reconcile` polls Razorpay and recovers the same Order/Payment; it can never create one.
-
-**Test keys only.** The client refuses to boot on anything but `rzp_test_…`.
+| We did | Not | Because |
+| --- | --- | --- |
+| Hand-written 8-turn buyer loop | LangChain / CrewAI | a generic tool-runtime makes `create_order` look like just another tool the model can pick |
+| REST gateway | Razorpay MCP in front of the agent | MCP *exposes* capability — the opposite of what an authorization boundary needs |
+| Low confidence → human (`STEP_UP`) | re-prompt the judge until confidence clears 0.85 | re-prompting to hit a threshold is p-hacking your own safety check |
+| Atomic single-row claim | in-memory mutex / Redis lock | serverless has no "one process" to lock; the DB's own write-lock does |
+| Judge sees canonical fields only | pass the full catalog record for "context" | free text is where prompt injection lives — proved with a live poisoned fixture |
+| Deterministic eval ground truth | let Gemini's own verdicts define correctness | a model grading itself always converges on "the model is right" |
+| SQLite local / Postgres deployed | one DB everywhere | `npm test` shouldn't need a hosted database |
 
 ---
 
-## 📊 Measured results
+## Security
 
-Held-out split, 120 cases. Run `2026-09-04T21:23Z` · judge `gemini-3.5-flash-lite` · 165 judge calls · **0 Razorpay calls**.
+| Property | Mechanism | Proof |
+| --- | --- | --- |
+| One path to money | only `decide.ts` calls `createOrder` | `grep` above |
+| Single-use, atomic | one conditional `UPDATE … WHERE status='ACTIVE'` before the Razorpay call, not read-then-write | `tests/decide.test.ts` concurrent-approval cases |
+| Approval isn't a weaker door | STEP_UP approval re-checks session/expiry/merchant, same as checkout | `src/gateway/session.ts` |
+| Server-priced carts | buyer sends SKU + qty; gateway re-fetches price from catalog | `priceCart` |
+| Judge is field-scoped | canonical fields only, never `description` | live poisoned fixture, `tests/judge-payload.test.ts` |
+| Replay + idempotency | key = `intent_id + sha256(cart)`; same cart replays the same order, different cart on a consumed intent is refused | `src/gateway/replay.ts` |
+| Fails closed | judge outage / bad JSON / Razorpay error → `STEP_UP` or `BLOCK`, never a silent pass | no "let it through" branch exists |
+| Webhooks verified + deduped | raw-body HMAC before anything runs; event id persisted before side effects | `src/webhooks/handler.ts` |
+| Test keys enforced | boot fails on anything but `rzp_test_…` | `src/razorpay/client.ts` |
 
-| Metric | Value |
+---
+
+## Evaluation
+
+**Held-out split, 120 cases** · run `2026-09-04T21:23Z` · `gemini-3.5-flash-lite` · 165 judge calls · **0 Razorpay calls**
+
+| Accuracy | Policy | Semantic | False blocks | Unauthorized allows | Step-up | Latency (mean/p95) |
+| --- | --- | --- | --- | --- | --- | --- |
+| **100%** (120/120) | 100% | 100% | **0** (₹0 GMV) | **0** | 2.5% (correct escalations) | 9.6s / 14.4s\* |
+
+\* includes eval-pacing waits, not raw judge latency. Source: `data/eval_results.json`, renders on `/demo` (says `NOT RUN` if the file doesn't exist).
+
+240 total = 120 legit + 120 adversarial, 8 classes (amount, quantity, category, semantic mismatch, expired, replay, prompt injection, ambiguity), split 60 dev / 60 validation / 120 held-out. Ground truth is deterministic templates — **the judge never grades its own answer.**
+
+A separate **live** 27-case sample (3/class, held-out) runs from the demo UI itself, in ~28s, 0 Razorpay calls — always reported separately from the 120-case baseline above, never merged into one number.
+
+*Disclosed:* an earlier run scored 98.3%, missing 4/5 ambiguity cases — the judge was confidently authorizing vague intents. Fixed with a confidence-calibration change. Old run kept at `data/eval_results_full_run1.json`, not deleted.
+
+---
+
+## Real artifacts
+
+| | |
 | --- | --- |
-| Decision accuracy | **100%** (120/120) |
-| Policy accuracy | 100% (37/37) |
-| Semantic accuracy | 100% (83/83) |
-| False blocks | **0** (₹0 lost GMV) |
-| Unauthorized allows | **0** |
-| Step-up rate | 2.5% (3/120 — ambiguity class H, correctly escalated) |
-| Latency mean / p95 | 9.6s / 14.4s *(includes 13-RPM evaluation pacing waits, not raw judge latency)* |
+| Captured payment | `pay_TYFtu8vjA3C0iT` |
+| Its order | `order_TYFPRIpLlJeFpf` · ₹7,499 |
 
-Numbers come from `data/eval_results.json` and render on `/demo`. Until a run completes, the UI says **NOT RUN** — no number here is a claim the file doesn't back. A separate, smaller **live** sample (27 held-out cases, 3 per class) is runnable from the demo UI itself and is always labeled and reported separately from this precomputed 120-case baseline — the two are never merged into one number.
-
-**False-block GMV is reported in ₹ on purpose.** A gateway that blocks everything scores perfectly on "unauthorized allows" and destroys the merchant's revenue. Both failure directions have to be priced.
-
-### Evaluation design
-
-240 cases = 120 legitimate + 120 adversarial, across eight classes:
-
-| Class | A | B | C | D | E | F | G | H |
-| --- | --- | --- | --- | --- | --- | --- | --- | --- |
-| | amount | quantity | category | semantic mismatch | expired intent | replay | prompt injection | ambiguity |
-
-Split 60 dev / 60 validation / 120 held-out; **held-out is the reported result**. Ground truth comes from deterministic templates — **Gemini judges cases but never defines correctness**, so the model is never grading its own homework. The eval module tree imports no Razorpay code at all.
-
-*Calibration, disclosed:* an earlier run scored 98.3% held-out, missing 4/5 class-H ambiguity cases — the judge was confidently authorizing vague intents. The fix was a confidence-calibration change so open-ended intents report low confidence and escalate. The pre-calibration run is preserved at `data/eval_results_full_run1.json` rather than deleted.
+Webhook route tested live: 400 on bad signature, 200 on valid, no-op on duplicate event id. Webhook-death → reconcile run twice — one order row survives both times.
 
 ---
 
-## 🧾 Real Razorpay artifacts
+## Failure handling
 
-Everything below was produced by the running system, not fabricated for the README.
-
-| Artifact | Value | How |
+| Failure | Behavior | Reproduce |
 | --- | --- | --- |
-| Captured payment | `pay_TYFtu8vjA3C0iT` | Human-completed Test Mode checkout |
-| Its order | `order_TYFPRIpLlJeFpf` (₹7,499) | Created by the gateway's ALLOW path |
-
-Webhook route live-tested for all three cases: 400 on bad signature · 200 on valid · no-op on duplicate event id. Webhook-death → reconcile recovery was run twice to confirm idempotency: the payment row is upserted, and exactly one order row still exists.
-
----
-
-## 🧯 Failure handling, demonstrated
-
-| Failure | Behaviour | Reproduce |
-| --- | --- | --- |
-| Webhook never arrives | API poll recovers the same order/payment, audits `WEBHOOK_TIMEOUT_RECONCILED`, creates no second order | `npm run demo:webhook-fail` |
-| Duplicate webhook | Event id persisted before side effects → 200-OK no-op | `scripts/webhook_route_smoke.ts` |
-| LLM returns garbage | Zod rejects → one retry → `STEP_UP`/`BLOCK` | `tests/gemini-retry.test.ts` |
-| Concurrent double-spend | Atomic claim; one ALLOW, one audited `BLOCK` | `tests/decide.test.ts` (`C1:` cases) |
-| Payment amount ≠ order amount | Flagged `PAYMENT_AMOUNT_MISMATCH`, order not marked paid | `tests/reconcile.test.ts` |
+| Webhook never arrives | API poll recovers same order/payment, audits `WEBHOOK_TIMEOUT_RECONCILED`, no 2nd order | `npm run demo:webhook-fail` |
+| Duplicate webhook | event id persisted first → 200 no-op | `scripts/webhook_route_smoke.ts` |
+| LLM returns garbage | Zod rejects → 1 retry → `STEP_UP`/`BLOCK` | `tests/gemini-retry.test.ts` |
+| Concurrent double-spend | atomic claim → 1 ALLOW, 1 audited `BLOCK` | `tests/decide.test.ts` |
+| Payment ≠ order amount | flagged `PAYMENT_AMOUNT_MISMATCH`, not marked paid | `tests/reconcile.test.ts` |
 
 ---
 
-## 🔌 API surface
+## API
 
 | Route | Purpose |
 | --- | --- |
-| `POST /api/sessions` | Open a merchant-bound session |
-| `POST /api/intents` | Natural language → typed intent contract |
-| `POST /api/agent/run` | Run the bounded buyer loop |
-| `POST /api/carts/propose` | Server-priced cart proposal |
-| `POST /api/checkout/request` | **Enter the gateway** — returns ALLOW/STEP_UP/BLOCK |
-| `POST /api/checkout/approve` | Merchant approval of a STEP_UP (re-runs L1) |
-| `POST /api/checkout/verify` | Server-side Checkout.js signature verification |
-| `POST /api/webhooks/razorpay` | Raw-body HMAC + event-id dedupe |
-| `GET /api/orders/:id` · `POST /api/orders/:id/reconcile` | Persisted order state · API-poll recovery |
-| `GET /api/audit/:intentId` · `GET /api/eval/results` | Audit timeline · precomputed evaluation metrics |
-| `POST /api/eval/run` | Live evaluation trigger — real 27-case held-out sample, 0 Razorpay calls |
+| `POST /api/sessions` | open a merchant-bound session |
+| `POST /api/intents` | text → typed intent contract |
+| `POST /api/agent/run` | run the bounded buyer loop |
+| `POST /api/carts/propose` | server-priced cart |
+| `POST /api/checkout/request` | **enters the gateway** → ALLOW/STEP_UP/BLOCK |
+| `POST /api/checkout/approve` | merchant approval, re-runs L1 |
+| `POST /api/checkout/verify` | server-side Checkout.js signature check |
+| `POST /api/webhooks/razorpay` | HMAC + dedupe |
+| `GET/POST /api/orders/:id[/reconcile]` | persisted state · recovery |
+| `GET /api/audit/:intentId` | audit timeline |
+| `GET /api/eval/results` · `POST /api/eval/run` | precomputed baseline · live sample |
 
 ---
 
-## ⚙️ Setup
+## Stack
 
-```bash
-npm install
-cp .env.example .env
-npx prisma migrate dev     # local SQLite
-npm run seed               # 26-SKU catalog + merchant policy
-npm run dev
-```
-
-| Var | Where it comes from |
+| | |
 | --- | --- |
-| `GEMINI_API_KEY` | [Google AI Studio](https://aistudio.google.com/apikey) |
-| `GEMINI_MODEL` / `GEMINI_FALLBACK_MODEL` | Model switching without code changes. Defaults `gemini-3.5-flash-lite` / `gemini-3.1-flash-lite` — the two tiers with 500 req/day on a fresh key. The plain `-flash` tiers cap at 20 req/day and exhaust almost immediately. |
-| `RAZORPAY_KEY_ID` · `RAZORPAY_KEY_SECRET` · `NEXT_PUBLIC_RAZORPAY_KEY_ID` | [Dashboard → Test Mode → API Keys](https://dashboard.razorpay.com/app/keys) (`rzp_test_…` only) |
-| `RAZORPAY_WEBHOOK_SECRET` | [Dashboard → Webhooks](https://dashboard.razorpay.com/app/webhooks) (`payment.captured`, `payment.failed`, `order.paid`) |
-| `DATABASE_URL` | `file:./dev.db` locally. **Exactly one line** — a Postgres value here makes every API route 500 against the SQLite schema. Neon URLs belong in Vercel env vars only; see [`docs/DEPLOY.md`](./docs/DEPLOY.md). |
-| `WEBHOOK_FORCE_FAIL` | `true` only for the failure-recovery demo |
+| [![Next.js](https://img.shields.io/badge/-Next.js_15-000000?style=flat-square&logo=nextdotjs&logoColor=white)](https://nextjs.org) | App Router, server routes + UI, one deployable |
+| [![TypeScript](https://img.shields.io/badge/-TypeScript_strict-3178C6?style=flat-square&logo=typescript&logoColor=white)](https://www.typescriptlang.org) | every model output + API body is typed, Zod-checked |
+| [![React](https://img.shields.io/badge/-React_19-149ECA?style=flat-square&logo=react&logoColor=white)](https://react.dev) | no component lib, no CSS-in-JS |
+| [![Prisma](https://img.shields.io/badge/-Prisma-2D3748?style=flat-square&logo=prisma&logoColor=white)](https://www.prisma.io) [![SQLite](https://img.shields.io/badge/-SQLite-003B57?style=flat-square&logo=sqlite&logoColor=white)](https://www.sqlite.org) [![Postgres](https://img.shields.io/badge/-Neon-4169E1?style=flat-square&logo=postgresql&logoColor=white)](https://neon.tech) | SQLite local, Neon on deploy |
+| [![Gemini](https://img.shields.io/badge/-Gemini_Flash-8E75B2?style=flat-square&logo=googlegemini&logoColor=white)](https://ai.google.dev) | compiler, buyer, judge — never the authorizer |
+| [![Zod](https://img.shields.io/badge/-Zod-3E67B1?style=flat-square&logo=zod&logoColor=white)](https://zod.dev) | the boundary between model output and the gateway |
+| [![Razorpay](https://img.shields.io/badge/-Razorpay_Test_Mode-0C2451?style=flat-square&logo=razorpay&logoColor=white)](https://razorpay.com) | official SDK, Orders API, Checkout.js, signed webhooks |
+| [![Vitest](https://img.shields.io/badge/-Vitest_64%2F64-6E9F18?style=flat-square&logo=vitest&logoColor=white)](https://vitest.dev) | unit, concurrency, eval-harness tests |
+| [![Vercel](https://img.shields.io/badge/-Vercel-000000?style=flat-square&logo=vercel&logoColor=white)](https://vercel.com) | `vercel.json` pins the build command |
 
-Deploying to Vercel + Neon? Full runbook in [`docs/DEPLOY.md`](./docs/DEPLOY.md).
-
----
-
-## 🧩 Tech stack
-
-<div align="left">
-
-| | | |
-| --- | --- | --- |
-| **Framework** | [![Next.js](https://img.shields.io/badge/-Next.js_15_(App_Router)-000000?style=flat-square&logo=nextdotjs&logoColor=white)](https://nextjs.org) | Server routes + UI in one deployable |
-| **Language** | [![TypeScript](https://img.shields.io/badge/-TypeScript_strict-3178C6?style=flat-square&logo=typescript&logoColor=white)](https://www.typescriptlang.org) | Every model output and API body is typed and Zod-validated |
-| **UI** | [![React](https://img.shields.io/badge/-React_19-149ECA?style=flat-square&logo=react&logoColor=white)](https://react.dev) | No component library, no CSS-in-JS — plain CSS, `next/font` |
-| **ORM / DB** | [![Prisma](https://img.shields.io/badge/-Prisma-2D3748?style=flat-square&logo=prisma&logoColor=white)](https://www.prisma.io) [![SQLite](https://img.shields.io/badge/-SQLite_(local)-003B57?style=flat-square&logo=sqlite&logoColor=white)](https://www.sqlite.org) [![Postgres](https://img.shields.io/badge/-Neon_Postgres_(deploy)-4169E1?style=flat-square&logo=postgresql&logoColor=white)](https://neon.tech) | SQLite for zero-setup local dev, Neon for the deployed instance |
-| **LLM** | [![Google Gemini](https://img.shields.io/badge/-Gemini_Flash-8E75B2?style=flat-square&logo=googlegemini&logoColor=white)](https://ai.google.dev) via `@google/genai` | Intent compiler, buyer agent, semantic judge — never the authorizer |
-| **Validation** | [![Zod](https://img.shields.io/badge/-Zod-3E67B1?style=flat-square&logo=zod&logoColor=white)](https://zod.dev) | The trust boundary between untrusted model output and the gateway |
-| **Payments** | [![Razorpay](https://img.shields.io/badge/-Razorpay_Test_Mode-0C2451?style=flat-square&logo=razorpay&logoColor=white)](https://razorpay.com) | Official `razorpay` SDK, Orders API, Checkout.js, signed webhooks |
-| **Tests** | [![Vitest](https://img.shields.io/badge/-Vitest_64%2F64-6E9F18?style=flat-square&logo=vitest&logoColor=white)](https://vitest.dev) | Unit, integration, concurrency, and eval-harness tests |
-| **Deploy** | [![Vercel](https://img.shields.io/badge/-Vercel-000000?style=flat-square&logo=vercel&logoColor=white)](https://vercel.com) | `vercel.json` pins the build command — no fragile dashboard setting |
-
-</div>
-
-**No agent framework and no MCP runtime on the payment path.** The tool loop is ~120 lines of hand-written TypeScript, because the authorization boundary is the product and it should be readable end to end. No LangChain, no CrewAI, no AutoGen, no vector DB — the catalog is structured data, not a RAG problem.
-
----
-
-## 🗂 Repository layout
+No agent framework, no MCP runtime on the payment path, no LangChain/CrewAI/AutoGen, no vector DB. ~120 lines of hand-written buyer loop; the catalog is structured data, not RAG.
 
 ```
-src/gateway/    decide.ts ← the only money path · session.ts · replay.ts
-src/policy/     engine.ts — pure deterministic checks
-src/semantic/   judge.ts — L3; buildJudgePayload omits description
-src/intent/     compiler.ts     src/agent/ buyer.ts (4 tools, no payment tool)
-src/razorpay/   client.ts (test-key guard) · orders.ts · payments.ts · verify.ts
-src/webhooks/   handler.ts — dedupe + amount-mismatch flagging
+src/gateway/         decide.ts — the only money path · session.ts · replay.ts
+src/policy/          engine.ts — pure deterministic checks
+src/semantic/        judge.ts — L3, canonical fields only
+src/intent/          compiler.ts        src/agent/  buyer.ts (4 tools, no payment tool)
+src/razorpay/        client.ts (test-key guard) · orders.ts · payments.ts
+src/webhooks/        handler.ts — dedupe + amount-mismatch flagging
 src/reconciliation/  reconcile.ts — observes only, never creates
-src/audit/      logger.ts — append-only, no update/delete API exists
-src/eval/       240 cases, deterministic ground truth, zero Razorpay imports
-app/demo/       the single-page authorization ledger UI (this is what you see live)
-app/api/        every route in the table above
+src/audit/           logger.ts — append-only
+src/eval/            240 cases, zero Razorpay imports
+app/demo/            the live authorization-ledger UI
 ```
 
-~2,400 lines of TypeScript in `src/`, 26 SKUs across 5 categories, 64 tests, 12 API routes.
+~2,400 lines of TypeScript in `src/`, 26 SKUs / 5 categories, 64 tests, 12 API routes.
 
 ---
 
-## 🔥 What broke during development
+## What broke
 
-Kept because the fixes are the interesting part.
-
-- **The evaluation crashed mid-run.** Gemini's free tier allows 20 requests/day/model and judge calls are the eval's hot path. The judge was hardened so an API failure fails closed to STEP_UP and is recorded per-case rather than aborting the batch.
-- **Replay eval cases raced.** The priming pass and the scored pass landed on different concurrency workers, so the scored pass sometimes ran first and corrupted its own ground truth. Both passes are now pinned to one job.
-- **Model tiers lied.** `gemini-2.5-flash` returns 404 for new API users; `gemini-3.6-flash` rejects `thinkingConfig` with a 400. The client now drops `thinkingConfig` per-model on first rejection and remembers the result.
-- **An expiry check read the wrong source.** It read `expires_at` from the stored contract JSON instead of the DB row, so a DB-forced expiry didn't block. The row is now the single source of truth.
-- **Single-use enforcement had a concurrency hole.** The original check read intent status, then consumed it *after* `createOrder` returned — a window spanning a network round trip, through which two different carts on one intent could both mint an Order. Replaced with the atomic conditional claim described above.
-
----
-
-## ⚠️ Limitations
-
-Stated plainly rather than hidden.
-
-- **Semantic judgment is probabilistic.** Ambiguous intents deliberately surface as STEP_UP rather than being silently authorized. That is a design choice, and it costs a 2.5% step-up rate.
-- **Test Mode only.** Every payment here is a sandbox transaction. No real money moves anywhere in this project.
-- **`POST /api/checkout/approve` is unauthenticated** in this single-merchant demo — anyone holding an `authorization_id` can approve that specific STEP_UP. Production would bind it to a merchant session. Left open and documented rather than quietly ignored.
-- **No agent identity layer.** No cryptographic agent credentials, no UAP/AP2/ACP/x402, no fraud platform. This is the authorization boundary, not an identity protocol.
-- **Known replay-reservation edge case.** If the Razorpay call fails *after* a replay key is reserved, that exact intent+cart becomes unretryable — the key is held but no order exists. The intent itself is released; the key row is not. Frequency is ~0 in Test Mode. A full fix needs reservation rollback on `RazorpayApiError`; deferred as a documented, accepted limitation.
-- **Single merchant, INR, 26-SKU catalog.**
+| Problem | Fix |
+| --- | --- |
+| Eval crashed mid-run on Gemini's 20 req/day free tier | judge fails closed to `STEP_UP` per-case instead of aborting the batch |
+| Replay eval cases raced across concurrency workers | pinned priming + scored pass to one job |
+| `gemini-2.5-flash` 404s, `gemini-3.6-flash` rejects `thinkingConfig` | client drops the param per-model on first rejection, remembers it |
+| Expiry check read stale contract JSON, not the DB row | DB row is now the single source of truth |
+| Single-use check read-then-wrote *after* `createOrder` — a race window | replaced with the atomic conditional claim above |
 
 ---
 
-## 📄 License
+## Limitations
 
-[MIT](./LICENSE) © 2026 Kavin Thakur
+- Semantic judgment is probabilistic — ambiguity surfaces as `STEP_UP` on purpose, costs a 2.5% step-up rate
+- Test Mode only, no real money anywhere
+- `POST /api/checkout/approve` is unauthenticated in this single-merchant demo — documented, not hidden
+- no agent identity layer (no UAP/AP2/ACP/x402, no fraud platform) — this is the authorization boundary, not an identity protocol
+- known replay-reservation edge case if a Razorpay call fails *after* the key reserves — deferred, ~0 frequency in Test Mode
+- single merchant, INR, 26 SKUs
 
 ---
 
 <div align="center">
 
-Built solo for the Razorpay AI Buildathon 2026 — intent compiler, buyer agent, policy engine, semantic judge, Razorpay integration, evaluation harness, and this frontend, end to end. No team, no boilerplate starter, no agent framework doing the hard part for me.
+**[MIT](./LICENSE)** © 2026 Kavin Thakur — built solo, end to end: intent compiler, buyer agent, policy engine, semantic judge, Razorpay integration, evaluation harness, this frontend.
 
-**Kavin Thakur** · [GitHub @auraCodesKM](https://github.com/auraCodesKM) · kavinthakur@gmail.com
+[GitHub @auraCodesKM](https://github.com/auraCodesKM) · kavinthakur@gmail.com
 
-The pitch is above. The proof is in `src/gateway/decide.ts` — read that file before this README if you only have one minute.
+Read `src/gateway/decide.ts` before this README if you only have one minute.
 
 </div>
