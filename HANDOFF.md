@@ -109,6 +109,19 @@ Phases P0–P15 all have code + tests. 56/56 Vitest, tsc clean, `next build` gre
 
 - 2026-09-05 Builder B4: presentability pass on `/demo` + `/checkout/[orderId]`, inline styles only. Before: bare default fonts/spacing, thin 2px lights, plain black-on-white reason-code text, no visual weight to the decision. After: consistent spacing/border-radius scale, a colored decision banner (green/amber/red matching ALLOW/STEP_UP/BLOCK) with reason codes inside it, larger bolder pipeline lights, monospace + `user-select:all` on every order/payment/intent id (one-click copy on camera), zebra-striped audit + eval tables. Zero changes to fetch calls, `useState`/`useEffect` logic, or any JSX conditional branch — confirmed by diff (styles/wrapping-divs only) and by re-running a real BLOCK flow via the API directly (`MAX_AMOUNT_EXCEEDED`, `razorpay_order_id: null`) which still maps to the same NOT-CREATED render path since that branch wasn't touched. Also fixed the `order_TYFPRIpLLJeFpf` → `order_TYFPRIpLlJeFpf` typo in `docs/DEMO_SCRIPT.md` (2 occurrences, narration text quoted on camera). | tests: `npm run typecheck` clean, `npx next build` green (identical route/size table), 59/59 vitest unaffected (no test touches these files) | invariant grep: clean | evidence: commit 1dd5aa5. HUMAN follow-up per queue: eyeball `/demo` before recording.
 
+- 2026-09-05 Builder B5: repo hygiene for public push. Added MIT `LICENSE` (Kavin Thakur, 2026). README Limitations: added the unauthenticated-approve-endpoint bullet and the replay-reservation edge-case bullet. Confirmed `data/eval_results_full_run1.json` has no secret-shaped strings (grep for key/secret/token/api: zero hits). Sweep outputs (all clean):
+  ```
+  $ git log --all --name-only --pretty=format: | sort -u | grep -E "(^|/)\.env$|(^|/)dev\.db$"
+  (empty — no .env or dev.db file path ever tracked in history)
+
+  $ git grep -I -E "rzp_test_[A-Za-z0-9]{10,}" -- ':!*.md'
+  (empty — no literal Razorpay test key anywhere in tracked non-markdown files)
+
+  $ git grep -I -nE "(API_KEY|SECRET|KEY_SECRET)\s*=\s*[\"']?[A-Za-z0-9_-]{15,}" -- ':!*.md' ':!.env.example'
+  (empty — no real-looking secret assignment outside .env.example, which is all blank)
+  ```
+  Note: an earlier plain `git log --all --stat | grep -E "\.env$|dev\.db"` (the exact command from the B5 spec) DOES return one hit — a commit message body line ("...doesn't match any row in prisma/dev.db...") from the B2 commit, prose not a file path. Re-ran with `--name-only` to check actual tracked paths instead of commit-message text, which is empty as shown above. Flagging the distinction so it isn't mistaken for a leak. | tests: `npm run typecheck && npm test` green, 59/59 | invariant grep: clean | evidence: commit 6c42c76. HUMAN follow-up per queue: create GitHub repo, push, confirm Settings→visibility.
+
 ## BUILDER QUEUE v2 (written by Fable/principal — execute in the subscription window)
 
 Protocol: work strictly in order (B1 blocks nothing but is highest risk-value; B2-B5 independent). Per task: run `npm run typecheck && npm test` before AND after; one commit per task ending with the session trailer already used in git log; append an evidence entry to the Decisions log (author tag: Builder). NEVER touch: layer ordering in decide.ts, judge/policy semantics, src/razorpay/* API surface, eval ground truth. Do NOT rerun the 240-case eval. Money-path invariant grep before finishing: `grep -rn "createOrder" src/ app/ --include="*.ts" | grep -v razorpay/orders | grep -v test` → must show only decide.ts.
