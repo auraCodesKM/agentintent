@@ -217,7 +217,7 @@ HUMAN CHECKPOINT: none for C1.
 
 ---
 
-## C2 — Revalidate parent session in `approveStepUp` (F6) → **sonnetCode** [COMPLETE — awaiting opus-think review]
+## C2 — Revalidate parent session in `approveStepUp` (F6) → **sonnetCode** [COMPLETE — ACCEPTED by opus-think 2026-09-05]
 
 **DONE 2026-09-05 (sonnetCode) — commit `f290097`.** Reused the existing `requireActiveSession(sessionId)` helper (`src/gateway/session.ts`, unchanged) inside `approveStepUp` — no duplicated status/expiry logic. Placement: immediately after the intent+cart lookup, before the existing `isIntentExpired` check, before any reservation/replay/order work, and before the `prisma.authorizationDecision.update({ status: "APPROVED" })` write — confirmed by reading, not assumed. `SessionError` is caught and converted to the existing `ApprovalError("AUTHORIZATION_NOT_APPROVABLE")` code; no new error code invented, no route change needed (`app/api/checkout/approve/route.ts` already maps this code to 409).
 
@@ -274,7 +274,32 @@ HUMAN CHECKPOINT: none.
 
 ---
 
-## C3 — Deployment-safe Prisma generation (F4) + stale command (F7) → **sonnetCode** [BLOCKED — C2 committed (`f290097`), awaiting opus-think review before C3 starts]
+**C2 REVIEWED BY opus-think 2026-09-05 — ACCEPTED (`f290097`).** Verified independently: 63/63 tests, `tsc` clean, one `createOrder` call site (`decide.ts:390`), one `claimIntent(` call site still the first statement of `executeAllow`, `markIntentConsumed` absent from `src/`, tree clean. Placement is right: the check sits before the `APPROVED` status write, so a rejected approval leaves the row `STEP_UP` (the tests assert this) and does not worsen D4. `requireActiveSession` was pre-existing and is reused, not duplicated. One accepted trade-off recorded in `docs/AGENTS.md`: the check precedes the `existingOrder` early return, so after the 1-hour session TTL a re-approval of an authorization that already produced an order returns 409 instead of that order id — no money impact, fail-closed, deliberate. **Review raised F9 → C2b below; do C2b before C3.**
+
+---
+
+## C2b — Revalidate merchant binding in `approveStepUp` (F9) → **sonnetCode** [ACTIVE]
+
+FROM: opus-think
+TO: sonnetCode
+TASK: Finish the L1 revalidation C2 started — `approveStepUp` must also enforce merchant binding.
+WHY: **F9, found during C2 review.** `requestCheckout` runs **two** L1 session checks (`src/gateway/decide.ts:65-71`): status/expiry, **and** `session.merchantId !== intent.merchant_id → MERCHANT_MISMATCH`. C2 added `requireActiveSession(intent.session_id)` to `approveStepUp` but **discards its return value**, which is exactly the `{ id, merchantId }` needed for the second check — so approval still skips merchant binding. Not currently exploitable (intents are stamped with their session's merchant at creation, so a mismatch needs DB tampering), but "merchant binding works" is an explicit invariant on the QA checklist and a claim in the product docs. Two lines to close; leaving it means a reviewer greps `approveStepUp` and finds a documented invariant unenforced.
+
+FILES: `src/gateway/decide.ts` (`approveStepUp`, the C2 block at ~line 213-222), `tests/decide.test.ts`.
+
+REQUIREMENTS:
+- Capture the value `requireActiveSession` already returns and compare `session.merchantId` to `intent.merchant_id`. On mismatch throw `ApprovalError("AUTHORIZATION_NOT_APPROVABLE")` — the same code C2 uses, already mapped to 409 by `app/api/checkout/approve/route.ts`. Do not invent a new error code and do not touch the route.
+- Keep it inside the same L1 block C2 added: before the intent-expiry check and before the `APPROVED` status write.
+- Do not re-query `prisma.session` — the helper's return value exists for this.
+
+CONSTRAINTS / INVARIANTS: do not touch C1's atomic claim (`claimIntent` stays the first statement of `executeAllow`, exactly one call site); do not reintroduce any unconditional consume helper; do not alter C2's status/expiry behaviour or its two tests; no new path to `createOrder`.
+VERIFICATION: `npm run typecheck && npm test` — 63 existing plus your new one, all green; new regression test: STEP_UP raised, then the session's `merchantId` forced to a different value in the DB, approval rejected with `AUTHORIZATION_NOT_APPROVABLE`, `createOrder` never called, authorization row still `STEP_UP`, zero `RazorpayOrder` rows.
+EVIDENCE: commit hash, test name, `grep -rn "createOrder" src/ app/ --include="*.ts"` (one hit after excluding adapter/tests), `grep -c "claimIntent(" src/gateway/decide.ts` (returns 1), confirmation the C1 and C2 tests still pass untouched.
+HUMAN CHECKPOINT: none.
+
+---
+
+## C3 — Deployment-safe Prisma generation (F4) + stale command (F7) → **sonnetCode** [BLOCKED on C2b review]
 
 FROM: opus-think
 TO: sonnetCode
@@ -293,9 +318,17 @@ VERIFICATION: `npm run typecheck && npm test && npx next build` green; `npm run 
 EVIDENCE: commit hash, the exact Build Command string documented in DEPLOY.md, `prisma generate` output line showing the Postgres schema was used.
 **HUMAN CHECKPOINT [HUMAN]**: Kavin must set the Vercel Build Command to `npm run build:vercel` when configuring the project, and provision Neon first. No agent can do or verify this. The deploy is NOT proven until a deployed instance serves `/demo` against Neon.
 
+**C3 definition of done (added by opus-think when re-blocking after C2/C2b).** C3 is complete when the repository is deploy-*ready*; it is explicitly NOT responsible for deploying. Done means all of:
+1. `npm run build:vercel` exists and generates the Prisma client from `prisma/schema.postgresql.prisma` (prove it: the `prisma generate` output line names that schema).
+2. `docs/DEPLOY.md` states, in order and copy-pasteable: the exact Vercel **Build Command** string; the full env-var list (`DATABASE_URL` = Neon **pooled** URL, `GEMINI_API_KEY`, `GEMINI_MODEL`, `GEMINI_FALLBACK_MODEL`, `RAZORPAY_KEY_ID`, `RAZORPAY_KEY_SECRET`, `NEXT_PUBLIC_RAZORPAY_KEY_ID`, `RAZORPAY_WEBHOOK_SECRET`); the one-time `npm run db:push-pg` + `npm run seed` against Neon; the webhook URL to register (`https://<app>.vercel.app/api/webhooks/razorpay`, events `payment.captured`, `payment.failed`, `order.paid`); and a post-deploy smoke check.
+3. `docs/DEPLOY.md` warns explicitly that the SQLite-dialect migrations in `prisma/migrations/` must NEVER be run against Neon, and that `db:migrate` is sqlite-dev-only.
+4. `scripts/gen_pg_schema.ts` no longer prints `prisma migrate deploy` (F7).
+5. Local SQLite dev is untouched: `npm run typecheck && npm test` green, `npm run seed` still works, `npm run db:gen-pg` still idempotent (clean `git diff` after rerun).
+6. **No deploy is attempted and no Neon/Vercel resource is created by any agent.** Provisioning, setting the Build Command, registering the webhook, and confirming a live `/demo` are all [HUMAN].
+
 ---
 
-## After C1–C3: agy re-audit [QUEUED]
+## After C1–C3 (incl. C2b): agy re-audit [QUEUED]
 
 agy re-audits C1–C3 only (QA only — never implements). Focus: is the C1 claim genuinely atomic or merely re-ordered; does the C1 test prove a race or only a sequence; does C2 close the approval door without breaking idempotent re-approve; does C3 actually cause a Postgres client to be generated in a Vercel-like build. Report in the FINDING/SEVERITY/EVIDENCE/REPRODUCTION/AFFECTED INVARIANT/RECOMMENDED FIX/STATUS format; opus-think decides acceptance.
 
