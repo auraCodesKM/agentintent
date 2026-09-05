@@ -1,0 +1,169 @@
+// GENERATED FILE — do not edit. Derived from schema.prisma by scripts/gen_pg_schema.ts
+// Regenerate: npm run db:gen-pg
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model Merchant {
+  id        String   @id
+  name      String
+  currency  String   @default("INR")
+  createdAt DateTime @default(now()) @map("created_at")
+
+  policies Policy[]
+  sessions Session[]
+
+  @@map("merchants")
+}
+
+model Policy {
+  id                String   @id
+  merchantId        String   @map("merchant_id")
+  maxAmount         Int      @map("max_amount")
+  maxQuantity       Int      @map("max_quantity")
+  allowedCategories String   @map("allowed_categories") // JSON string array
+  approvalThreshold Int?     @map("approval_threshold")
+  policyVersion     Int      @default(1) @map("policy_version")
+  active            Boolean  @default(true)
+  createdAt         DateTime @default(now()) @map("created_at")
+
+  merchant Merchant @relation(fields: [merchantId], references: [id])
+
+  @@map("policies")
+}
+
+model Session {
+  id         String   @id
+  merchantId String   @map("merchant_id")
+  status     String   @default("ACTIVE") // CREATED | ACTIVE | EXPIRED | CLOSED
+  createdAt  DateTime @default(now()) @map("created_at")
+  expiresAt  DateTime @map("expires_at")
+
+  merchant Merchant         @relation(fields: [merchantId], references: [id])
+  intents  IntentContract[]
+
+  @@map("sessions")
+}
+
+model IntentContract {
+  id                 String   @id
+  sessionId          String   @map("session_id")
+  merchantId         String   @map("merchant_id")
+  rawRequest         String   @map("raw_request")
+  structuredContract String   @map("structured_contract") // JSON
+  status             String   @default("CREATED") // CREATED | VALIDATED | ACTIVE | EXPIRED | CONSUMED
+  createdAt          DateTime @default(now()) @map("created_at")
+  expiresAt          DateTime @map("expires_at")
+
+  session Session @relation(fields: [sessionId], references: [id])
+  carts   Cart[]
+
+  @@map("intent_contracts")
+}
+
+model Cart {
+  id        String   @id
+  intentId  String   @map("intent_id")
+  itemsJson String   @map("items_json") // JSON [{sku, quantity}]
+  subtotal  Int // rupees
+  currency  String   @default("INR")
+  createdAt DateTime @default(now()) @map("created_at")
+
+  intent IntentContract @relation(fields: [intentId], references: [id])
+
+  @@map("carts")
+}
+
+model AuthorizationDecision {
+  id                 String   @id
+  intentId           String   @map("intent_id")
+  cartId             String   @map("cart_id")
+  decision           String // ALLOW | STEP_UP | BLOCK
+  status             String   @default("PENDING") // PENDING | BLOCKED | STEP_UP | APPROVED | ALLOWED
+  reasonCodes        String   @map("reason_codes") // JSON string array
+  semanticConfidence Float?   @map("semantic_confidence")
+  createdAt          DateTime @default(now()) @map("created_at")
+
+  @@map("authorization_decisions")
+}
+
+model ReplayKey {
+  key       String   @id
+  intentId  String   @map("intent_id")
+  createdAt DateTime @default(now()) @map("created_at")
+
+  @@map("replay_keys")
+}
+
+model RazorpayOrder {
+  id              String   @id
+  intentId        String   @map("intent_id")
+  cartId          String   @map("cart_id")
+  idempotencyKey  String   @unique @map("idempotency_key")
+  razorpayOrderId String   @unique @map("razorpay_order_id")
+  amount          Int // paise
+  currency        String   @default("INR")
+  status          String   @default("CREATED") // CREATED | PAYMENT_PENDING | FAILED | PAID
+  createdAt       DateTime @default(now()) @map("created_at")
+
+  @@map("razorpay_orders")
+}
+
+model Payment {
+  id                String   @id
+  razorpayOrderId   String   @map("razorpay_order_id")
+  razorpayPaymentId String   @unique @map("razorpay_payment_id")
+  amount            Int // paise
+  status            String
+  method            String?
+  createdAt         DateTime @default(now()) @map("created_at")
+
+  @@map("payments")
+}
+
+model WebhookEvent {
+  id               String   @id
+  razorpayEventId  String   @unique @map("razorpay_event_id")
+  eventType        String   @map("event_type")
+  signatureValid   Boolean  @map("signature_valid")
+  payload          String // JSON
+  processed        Boolean  @default(false)
+  receivedAt       DateTime @default(now()) @map("received_at")
+
+  @@map("webhook_events")
+}
+
+model AuditLog {
+  id           String   @id
+  sessionId    String?  @map("session_id")
+  intentId     String?  @map("intent_id")
+  eventType    String   @map("event_type")
+  reasonCode   String?  @map("reason_code")
+  actor        String // user | agent | gateway | razorpay
+  metadataJson String   @default("{}") @map("metadata_json")
+  createdAt    DateTime @default(now()) @map("created_at")
+
+  @@map("audit_logs")
+}
+
+model EvaluationCase {
+  id                  String  @id
+  split               String // dev | validation | held-out
+  intent              String // JSON
+  policy              String // JSON
+  cart                String // JSON
+  expectedDecision    String  @map("expected_decision")
+  expectedReasonCodes String  @map("expected_reason_codes") // JSON array
+  actualDecision      String? @map("actual_decision")
+  actualReasonCodes   String? @map("actual_reason_codes")
+  semanticConfidence  Float?  @map("semantic_confidence")
+  latencyMs           Int?    @map("latency_ms")
+
+  @@map("evaluation_cases")
+}

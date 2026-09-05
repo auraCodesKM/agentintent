@@ -54,8 +54,8 @@ Phases P0–P15 all have code + tests. 56/56 Vitest, tsc clean, `next build` gre
 **Eval status: FINAL — 240/240 (100%) on all splits** with calibrated judge (run 2026-09-04T21:23Z, gemini-3.5-flash-lite, 165 judge calls, 0 Razorpay calls). Held-out: accuracy 100%, policy 100%, semantic 100%, false blocks 0 (₹0), unauthorized allows 0, step-up 2.5% (H cases, correct), latency mean 9.6s / p95 14.4s (includes 13-RPM pacing waits — quote with that caveat). `data/eval_results.json` (gitignored, regenerable); pre-calibration run preserved in `data/eval_results_full_run1.json` (held-out 98.3%, H 1/5) — keep both for the honest before/after story.
 
 **NOT yet done (blocked on human or pending):**
-- [ ] Human confirms `order_TY5UjaGUfiajXO` in Dashboard → Test Mode → Orders
-- [ ] Human completes a Checkout.js payment (`/checkout/<order_id>`, UPI `success@razorpay`) → real `pay_` + Dashboard camera shot (P10 done-when)
+- [x] Human completes a Checkout.js payment — **DONE 2026-09-05: `pay_TYFtu8vjA3C0iT` status `captured` for `order_TYFPRIpLLJeFpf` (₹7,499) via /demo Test Mode checkout.** P10 done-when satisfied with a real, human-verified payment.
+- [ ] Human confirms orders visible in Dashboard → Test Mode → Orders (camera shot for video)
 - [ ] Human registers webhook in Dashboard (needs public URL: ngrok or Vercel) → live webhook delivery test
 - [ ] `WEBHOOK_FORCE_FAIL=true` end-to-end failure demo (needs a real payment + registered webhook)
 - [ ] Vercel + Neon deploy (human: create Neon DB, link Vercel, set env vars; agent: `prisma migrate deploy`, deploy config)
@@ -72,7 +72,13 @@ Phases P0–P15 all have code + tests. 56/56 Vitest, tsc clean, `next build` gre
 - 2026-09-05 Fable: eval ground truth = deterministic templates only; Gemini never labels correctness. Class G (poisoned SKU HP-007) expected ALLOW — proves description never reaches judge.
 - 2026-09-05 Fable: buyer transcript persisted only in run response (not DB) — acceptable for demo; audit log carries the durable trail.
 - 2026-09-05 Sonnet: independently verified quota table above via direct `generateContent` calls — `gemini-3.8-flash`/`gemini-3.6-flash` both returned `RESOURCE_EXHAUSTED` (20 RPD free tier, burned). `.env` already correctly on the two 500-RPD lite models; no change needed.
+- 2026-09-05 Fable (principal review of Sonnet tasks 1-5): all verified — diffs minimal, 56/56, tsc clean, money-path invariant intact. Task-5 verdict: two hand-maintained schema files REJECTED (drift risk); approved variant = `schema.postgresql.prisma` DERIVED from `schema.prisma` by a script that swaps only the provider line (single source of truth). Execute only when human has Neon DB ready — not before.
+- 2026-09-05 Fable (human-verified): real captured payment `pay_TYFtu8vjA3C0iT` for `order_TYFPRIpLLJeFpf` (₹7,499) through /demo checkout. This is the canonical "real money-shaped proof" for the submission; separate from all automated claims.
 - 2026-09-05 Fable: judge confidence calibration added (commit 0427fe7) — vague/open-ended intents must report confidence < 0.7 → STEP_UP. Justified by eval evidence (class H 1/5 across all splits; rules.md §0.1). Validation rerun after fix: 100% (60/60), H 2/2, zero new false blocks. Full-run-1 results (pre-fix, held-out 98.3%/policy 100%) preserved at `data/eval_results_full_run1.json`; final full rerun with calibrated judge writes `data/eval_results.json`.
+
+- 2026-09-05 Opus (verified+committed by Fable): TOCTOU fix in decide.ts — reserveReplayKey P2002 → audited BLOCK REPLAY_DETECTED (both requestCheckout and approveStepUp); intents single-use — markIntentConsumed after successful order creation in executeAllow; consumed intent blocks NEW carts (after idempotent-retry check, so same intent+cart still returns its order). 2 new tests, 58/58.
+- 2026-09-05 Fable: KNOWN LIMITATION (pre-existing, accepted): Razorpay API failure after replay-key reservation leaves that intent+cart unretryable (key held, no order). Frequency ~0 in test mode; fix would need reservation rollback on RazorpayApiError — deferred, do not fix without proposal.
+- 2026-09-05 Fable: Neon deploy prep executed per approved variant — `scripts/gen_pg_schema.ts` derives `prisma/schema.postgresql.prisma` (gitignore the generated file? NO — commit it so Vercel builds without a gen step, but regenerate via `npm run db:gen-pg` after any schema change).
 
 ## Sonnet task queue (Fable delegates; Fable verifies before merge)
 
