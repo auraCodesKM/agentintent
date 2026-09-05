@@ -1,151 +1,96 @@
 # Agent Coordination
 
+Shared memory for the AgentIntent multi-agent team. `HANDOFF.md` answers *"what should the next builder do?"*; this file answers *"what has the team learned and what is the current state?"*.
+
+Read order before any meaningful work: `HANDOFF.md` → this file → `product.md` (frozen product intent) → `rules.md` (non-negotiable process) → `README.md`.
+
+Roles: **opus-think** (principal — architecture/security/priority, reviews, never implements) · **sonnetCode** (primary builder) · **opusCode** (hard security/money-path/concurrency implementation only) · **agy** (independent adversarial QA, does not modify source).
+
+Only ONE coding agent modifies implementation files at a time. Check `git log`/`git status` before starting.
+
 ## Current State
 
-AgentIntent (Razorpay AI Buildathon 2026 Track 1) is feature-complete for
-submission. Builder queue B1-B5 (money-path fix, webhook-failure demo, deploy
-prep, demo polish, repo hygiene) is done and pushed to GitHub. 59/59 tests
-green, `tsc --noEmit` clean, `next build` green. Public repo:
-https://github.com/auraCodesKM/agentintent (master branch, HEAD `d4b82e6`).
-No deploy has been executed (Vercel/Neon steps are documented, not run).
-Remaining work is entirely human checkpoints (Dashboard verification, webhook
-registration, Neon/Vercel setup, pitch video).
+Feature-complete for the Buildathon submission. Phases P0–P15 implemented; Builder queue v2 (B1–B5) complete and reviewed. 59/59 Vitest, `tsc --noEmit` clean, `next build` green, money-path invariant intact, secret sweeps clean, MIT LICENSE present. **All remaining work is human-only** (deploy resources, webhook registration, video, GitHub push) — no code task is currently assigned to any builder.
 
 ## Active Agent
 
-None actively modifying implementation files as of this entry.
+**None implementing.** opus-think last acted (review + this board). Next builder assignment requires a new task in `HANDOFF.md`.
 
 ## Completed Work
 
-- **B1** [COMPLETE] approveStepUp single-use gap closed (money-path security).
-  Owner: sonnetCode. Commit: `f4063a1`. Reviewed and accepted by Fable
-  (principal window) with adversarial re-check of the fix logic.
-- **B2** [COMPLETE] Scripted webhook-failure recovery demo
-  (`npm run demo:webhook-fail`). Owner: sonnetCode. Commit: `72db829`.
-  Reviewed and accepted by Fable.
-- **B3** [COMPLETE] Deploy readiness, config only, nothing deployed
-  (`docs/DEPLOY.md`, `db:push-pg`). Owner: sonnetCode. Commit: `1ee390a`.
-  Reviewed and accepted by Fable.
-- **B4** [COMPLETE] Demo presentability pass, styles only, zero behavior
-  change. Owner: sonnetCode. Commit: `1dd5aa5`.
-- **B5** [COMPLETE] Public-repo hygiene — MIT LICENSE, README limitations,
-  history sweep (clean). Owner: sonnetCode. Commit: `6c42c76`.
-- **GitHub publication** [COMPLETE] Repo created (`auraCodesKM/agentintent`,
-  public, confirmed with human before creation), pushed normally (no force).
-  Verified: local HEAD == remote HEAD (`d4b82e6`), LICENSE + README present,
-  no `.env`/`dev.db` tracked, `src/`/`app/`/`tests/` all present.
+| ID | Task | Owner | Commit | Review |
+| --- | --- | --- | --- | --- |
+| B1 | `approveStepUp` single-use gap (money path) | builder | `f4063a1` | [COMPLETE] opus-think accepted `799b4d9` |
+| B2 | Scripted webhook-failure recovery demo | builder | `72db829` | [COMPLETE] accepted |
+| B3 | Deploy readiness (Neon/Vercel, config only) | builder | `1ee390a` | [COMPLETE] accepted |
+| B4 | Demo presentability pass (styles only) | builder | `1dd5aa5` | [COMPLETE] accepted (see Verification) |
+| B5 | Public-repo hygiene (LICENSE, limitations, sweeps) | builder | `6c42c76` | [COMPLETE] accepted |
+
+Earlier: judge confidence calibration `0427fe7`; TOCTOU + single-use intent fix (Opus, verified by Fable); derived Postgres schema `af2d01a`.
 
 ## Current Task
 
-None in progress. Awaiting either a new principal-engineer assignment via
-HANDOFF.md or a human checkpoint being completed.
+None active. Queue is drained of agent-executable work.
 
 ## Important Decisions
 
-- **Single money path (frozen)**: only `src/gateway/decide.ts` may reach
-  `createOrder` (`src/razorpay/orders.ts`). Verify with:
-  `grep -rn "createOrder" src/ app/ --include="*.ts" | grep -v razorpay/orders | grep -v test`
-  → must return exactly one line, `decide.ts`.
-- **Intents are single-use**: `IntentContract.status` flips ACTIVE → CONSUMED
-  the moment any order is created from it (`markIntentConsumed` in
-  `executeAllow`, covers both `requestCheckout` ALLOW and `approveStepUp`).
-  A consumed intent cannot authorize a *new* cart; the *same* intent+cart
-  retry (or the *same* authorization re-approved) still returns the
-  existing order (idempotent by `idempotencyKey = intent_id + sha256(cart)`).
-- **Neon deploy uses `prisma db push`, never `prisma migrate deploy`** — the
-  checked-in migrations are sqlite-dialect and will not apply to Postgres.
-  `prisma/schema.postgresql.prisma` is a generated, committed file (source
-  of truth is `prisma/schema.prisma`; regenerate via `npm run db:gen-pg`).
-- **Gemini models are env-driven**, current working pair on this API key:
-  `gemini-3.5-flash-lite` / `gemini-3.1-flash-lite` (500 RPD each). The
-  `-flash`/`2.5-flash` tiers are 20 RPD and effectively unusable at eval
-  scale. See HANDOFF.md quota table for the full picture.
-- **`POST /api/checkout/approve` is deliberately unauthenticated** in this
-  single-merchant demo (documented in README Limitations, not a bug).
+Durable decisions future agents must not re-litigate (full history in `HANDOFF.md` Decisions log):
+
+- **Only `src/gateway/decide.ts` may reach `createOrder`.** Verified by grep every session. No production path may create a Razorpay Order elsewhere.
+- **Idempotency key == replay key** = `intent_id + sha256(canonical cart, items sorted by sku)`. An existing order for that key returns the same ALLOW + order id (idempotent), not `REPLAY_DETECTED`.
+- **Intents are single-use.** `markIntentConsumed` runs after successful order creation. `requestCheckout` blocks new carts on a CONSUMED intent; `approveStepUp` does the same, but *after* its `existingOrder` lookup so idempotent re-approval still works.
+- **Intent expiry source of truth is the DB row (`expiresAt`)**, never the stored contract JSON.
+- **Policy failures never invoke the judge** (quota + clean causal story). Judge failure → STEP_UP, never ALLOW.
+- **Eval ground truth is deterministic templates only.** Gemini judges cases but never defines correctness. Eval module tree imports no Razorpay code.
+- **Gemini models are env-driven** (`GEMINI_MODEL` / `GEMINI_FALLBACK_MODEL`) — human-approved deviation from `product.md` §9. Only the two `*-flash-lite` tiers have 500 RPD on this key; everything else is 20 RPD or 0.
+- **Neon deploy uses `prisma db push`, never `migrate deploy`** — existing migrations are SQLite-dialect and must not be applied to Postgres. `prisma/schema.postgresql.prisma` is GENERATED by `npm run db:gen-pg`; never hand-edit it.
+- Judge payload is built from canonical fields only and never includes catalog `description` (prompt-injection surface; SKU `HP-007` is a poisoned fixture).
 
 ## Findings
 
-- **[MEDIUM] approveStepUp allowed two different-cart STEP_UPs on one intent
-  to both be approved → two Orders from one intent.**
-  Discovered by: sonnetCode (assigned as B1 by Fable). Date: 2026-09-05.
-  Location: `src/gateway/decide.ts` `approveStepUp`.
-  Status: FIXED, commit `f4063a1`, VERIFIED BY TEST (new regression test in
-  `tests/decide.test.ts`) and VERIFIED BY CODE INSPECTION (Fable's
-  adversarial review, recorded in HANDOFF.md 2026-09-05 entry).
-- **[LOW] Idempotent re-approval of the same STEP_UP authorization was
-  impossible** — the entry guard in `approveStepUp` required
-  `status === "STEP_UP"`, but the first approval flips status to `APPROVED`
-  before `executeAllow` runs, so any retry died at the guard instead of
-  returning the existing order. Discovered by: sonnetCode, while
-  implementing B1 (not separately assigned — found via the test itself
-  failing). Date: 2026-09-05. Status: FIXED in the same commit `f4063a1`,
-  VERIFIED BY TEST.
-- **[LOW] Documentation typo**: the real captured-payment order id was
-  recorded in HANDOFF.md/docs/DEMO_SCRIPT.md as `order_TYFPRIpLLJeFpf`
-  (double uppercase LL) — does not match any row in `prisma/dev.db`. The
-  correct id, verified directly against the `razorpay_orders` table, is
-  `order_TYFPRIpLlJeFpf` (lowercase `l`). Discovered by: sonnetCode, date:
-  2026-09-05, while building B2. Status: FIXED in `docs/DEMO_SCRIPT.md`
-  (commit `1dd5aa5`); historical HANDOFF.md entries left as-is (append-only)
-  with a correction note added. Fable confirmed this as canonical.
+**F1 — `approveStepUp` single-use bypass** · severity: HIGH (money path) · discovered by: opus-think (code review) · 2026-09-05 · `src/gateway/decide.ts` · **status: FIXED (`f4063a1`), verified by test + code inspection.**
+A CONSUMED intent could still approve a *second, different-cart* STEP_UP, minting two Orders from a single-use intent. `requestCheckout` had the check; `approveStepUp` did not.
+
+**F2 — Idempotent re-approval was impossible** · severity: MEDIUM · discovered by: builder while fixing F1 · 2026-09-05 · `src/gateway/decide.ts` entry guard · **status: FIXED (`f4063a1`).**
+The guard required `status === "STEP_UP"`, but the first approve flips status to `APPROVED` before `executeAllow`, so any retry of the same authorization died at the guard instead of returning its existing order. Guard now accepts `STEP_UP` or `APPROVED`. *Safety argument (verified by inspection):* the relaxed guard cannot return another cart's order, because `existingOrder` is keyed by the replay key — a different cart misses it and falls into the CONSUMED rejection. The `APPROVED` path only reaches order creation when no order exists, i.e. genuine crash recovery.
+
+**F3 — Order-id transcription typo** · severity: LOW (demo credibility) · discovered by: builder · 2026-09-05 · `HANDOFF.md` historical lines · **status: CORRECTED downstream.**
+Canonical DB-verified ids for the real captured payment: **`order_TYFPRIpLlJeFpf`** (lowercase `l`) / **`pay_TYFtu8vjA3C0iT`**, ₹7,499. `docs/DEMO_SCRIPT.md` and `scripts/webhook_failure_demo.ts` use the correct form. **Never retype these by hand — copy from here or the DB.** Older `HANDOFF.md` lines keep the wrong `LL` spelling because that log is append-only.
 
 ## Deferred Issues
 
-- **Replay-key reservation not rolled back on Razorpay API failure.** If
-  `createOrder` fails *after* `reserveReplayKey` succeeds, that exact
-  intent+cart becomes permanently unretryable (key held, no order).
-  Frequency ~0 in Test Mode. Documented in README Limitations. Do not fix
-  without a written proposal (money-path change).
-- **Cosmetic**: if two STEP_UP authorizations exist for the *same* cart,
-  approving the second returns the first's order via the `existingOrder`
-  path without updating the second row's status — it lingers as `STEP_UP`
-  in the UI. No money impact (same cart → same replay key → one order).
-  Recorded by Fable in HANDOFF.md 2026-09-05, deliberately not fixed this
-  close to submission.
+**D1 — Replay-reservation wart** · severity: LOW · A Razorpay API failure *after* `reserveReplayKey` succeeds leaves that exact intent+cart pair permanently unretryable (the key is reserved but no order exists). Fail-closed and safe; costs one retry path. Documented in README Limitations. Not fixed — the compensating-delete would add a failure mode to the money path for a demo-irrelevant edge case.
+
+**D2 — Same-cart second STEP_UP row lingers** · severity: COSMETIC · If two STEP_UP authorizations exist for the *same* cart, approving the second returns the first's order via the `existingOrder` path without updating the second row's status, so it still shows `STEP_UP` in the UI. No money impact: same cart → same replay key → one order. Not fixed; not worth a money-path edit pre-submission.
+
+**D3 — Approve endpoint is unauthenticated** · `POST /api/checkout/approve` has no merchant auth — deliberate for a single-merchant demo; production would bind it to a merchant session. Documented in README Limitations rather than hidden.
 
 ## Verification Evidence
 
-- 59/59 Vitest across 10 files, `tsc --noEmit` clean, `next build` green —
-  re-verified after every one of B1-B5.
-- Money-path grep clean after every task (see Important Decisions above).
-- B1: regression test proves two different-cart STEP_UPs on one intent
-  cannot both mint an Order; `createOrder` mock called exactly once across
-  the full scenario including a re-approval attempt.
-- B2: `npm run demo:webhook-fail` run twice against a live server with
-  `WEBHOOK_FORCE_FAIL=true` (restarted between runs) — second run
-  idempotent (same 1 order row, same 1 payment row). Zero Razorpay writes.
-- B5 secret sweep (all clean, VERIFIED BY COMMAND, outputs in HANDOFF.md):
-  no `.env`/`dev.db` file ever tracked in git history (checked actual
-  tracked paths, not commit-message prose); no literal `rzp_test_` key in
-  any tracked non-markdown file; no real-looking `*_KEY`/`*_SECRET`
-  assignment outside `.env.example` (which is all blank).
-- GitHub push: local HEAD == remote HEAD (`d4b82e6`), confirmed via
-  `git rev-parse` on both sides post-push.
-- Eval: 240/240 (100%) held-out split, calibrated judge, 165 judge calls,
-  0 Razorpay calls (run 2026-09-04T21:23Z) — CLAIMED BY Fable, VERIFIED BY
-  FILE (`data/eval_results.json`, gitignored/regenerable). Not rerun by
-  sonnetCode per explicit instruction (do not rerun the 240-case eval
-  without a concrete regression).
+Independently re-run by opus-think after B5 (2026-09-05), not taken on the builder's word:
+
+- **Tests: 59/59 pass**, 10 files. `tsc --noEmit` clean. `next build` green.
+- **Money-path grep** — `grep -rn "createOrder" src/ app/ scripts/` minus the adapter and tests returns exactly one hit: `src/gateway/decide.ts:343`. **VERIFIED BY CODE INSPECTION.**
+- **B1 regression proves the security property**, not just coverage: one intent → two different carts → both STEP_UP → approve #1 yields an order → approve #2 throws `AUTHORIZATION_NOT_APPROVABLE` with `createOrder` called **exactly once** and auth #2 marked `REJECTED` → re-approving #1 returns the *same* order id, still one call.
+- **Secret sweeps clean** (re-run independently): no `.env` or `*.db` path ever tracked in any commit; no literal `rzp_test_` key value in tracked non-markdown files; no `AIza…` Gemini key anywhere tracked.
+- **B4 is styles-only — VERIFIED BY CODE INSPECTION**, not by claim: the diff over `app/` contains no `fetch`, `useState`/`useEffect`, `await`, setter, or JSX-conditional lines.
+- **Evaluation: 240/240 (100%)** on dev / validation / held-out (run 2026-09-04T21:23Z, `gemini-3.5-flash-lite`, 165 judge calls, **0 Razorpay calls**). Held-out: policy 100%, semantic 100%, false blocks 0 (₹0 GMV), unauthorized allows 0, step-up 2.5% (class H, correctly escalated), latency mean 9.6s / p95 14.4s — **these include 13-RPM pacing waits and must always be quoted with that caveat.** Do not rerun without a concrete reason (~13 min, ~160 quota units).
+- **Razorpay reality — VERIFIED MANUALLY by the human:** captured payment `pay_TYFtu8vjA3C0iT` for `order_TYFPRIpLlJeFpf` (₹7,499) through `/demo` Test Mode checkout. Webhook route live-tested: 400 bad signature / 200 valid / duplicate no-op. Webhook-death → reconcile recovery run twice (idempotent, zero orders created).
 
 ## Human Checkpoints
 
-- [HUMAN] Confirm both real test orders visible in Razorpay Dashboard →
-  Test Mode → Orders (camera shot for the pitch video).
-- [HUMAN] Watch one `npm run demo:webhook-fail` run live and confirm its
-  output matches the Dashboard state.
-- [HUMAN] Eyeball `/demo` visually before recording (B4 styling pass).
-- [HUMAN] Register the webhook in the Razorpay Dashboard (needs a public
-  URL — ngrok locally, or the Vercel URL after deploy) and run a live
-  webhook delivery test.
-- [HUMAN] Create the Neon project, link Vercel, set the env vars listed in
-  `docs/DEPLOY.md`, then tell an agent to execute the one-time
-  `db:push-pg` + `seed` steps.
-- [HUMAN] Record the 5-minute pitch video (`docs/DEMO_SCRIPT.md` has the
-  full shot-by-shot script with corrected ids).
-- [HUMAN] Confirm GitHub repo Settings → Visibility on
-  `auraCodesKM/agentintent` matches intent (currently public).
+Only the human (Kavin) can complete these. None may be marked complete by an agent.
+
+- **[HUMAN]** Confirm orders visible in Razorpay Dashboard → Test Mode → Orders (camera shot for the video).
+- **[HUMAN]** Register the webhook in the Dashboard — needs a public URL (ngrok or the Vercel deployment): `https://<app>/api/webhooks/razorpay`, events `payment.captured`, `payment.failed`, `order.paid`. Then confirm one live delivery.
+- **[HUMAN]** Create the Neon database, link Vercel, set env vars — then tell a builder to execute `docs/DEPLOY.md`. No agent can create these resources.
+- **[HUMAN]** Watch one `npm run demo:webhook-fail` run live and confirm the output matches the Dashboard.
+- **[HUMAN]** Eyeball `/demo` (and one BLOCK flow) before recording — B4 changed styling only, so this is an aesthetic sign-off.
+- **[HUMAN]** Record the 5-minute pitch video using `docs/DEMO_SCRIPT.md`.
+- **[HUMAN]** Create the public GitHub repo, push, confirm Settings → visibility.
 
 ## Next Recommended Action
 
-No open engineering task. Next step is human checkpoints above, or a new
-assignment from opus-think in HANDOFF.md once one exists.
+**Assign `agy` an independent adversarial QA pass** before the public push — it is the one form of verification the team has not yet had, and every builder claim so far has been checked only by opus-think. Priority targets: `approveStepUp`/`requestCheckout` state machine (attack F1/F2 from a different angle), replay + expiry + merchant binding, whether the 59 tests prove security properties or merely execute code, and demo honesty (does every claim in `README.md` / `docs/SUBMISSION.md` trace to a real artifact?). agy reports findings here or to opus-think; it must not modify source.
+
+In parallel, the human checkpoints above are the critical path to submission — the repository itself is ready.

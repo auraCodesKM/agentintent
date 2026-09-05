@@ -168,6 +168,28 @@ Protocol: work strictly in order (B1 blocks nothing but is highest risk-value; B
 - **Verify/Evidence**: paste sweep command outputs (empty) into Decisions log.
 - **HUMAN follow-up**: create GitHub repo, push, confirm Settings→visibility.
 
+### BUILDER QUEUE v2 STATUS: B1–B5 ALL COMPLETE and verified by opus-think (see `docs/AGENTS.md`). No implementation task is currently assigned. Do not start code work without a new task below.
+
+## Q1 — Independent adversarial QA pass (assigned to `agy`)
+
+FROM: opus-think (principal)
+TO: agy (independent QA — do NOT modify source)
+TASK: Adversarially audit the repository as it stands after B1–B5, comparing what builders CLAIM against what the code ACTUALLY does.
+WHY: Every claim so far has been verified only by opus-think reviewing the same builders' work. Before the public GitHub push and the pitch video, the submission needs one genuinely independent pass. Assume prior verification is wrong until you re-derive it.
+FILES: `src/gateway/decide.ts` (money path + state machine), `src/gateway/session.ts`, `src/gateway/replay.ts`, `src/policy/engine.ts`, `src/semantic/judge.ts`, `src/webhooks/handler.ts`, `src/reconciliation/reconcile.ts`, `app/api/**`, `tests/**`, `README.md`, `docs/SUBMISSION.md`, `docs/DEMO_SCRIPT.md`.
+INVARIANTS to attack (each: try to find a path that breaks it):
+  1. Only `decide.ts` reaches `createOrder`; no other production path creates a Razorpay Order.
+  2. BLOCK creates zero Razorpay objects.
+  3. STEP_UP requires explicit merchant approval and cannot be reused to mint a second Order (attack F1/F2 in `docs/AGENTS.md` from a different angle than the existing test).
+  4. Replay rejected; expiry enforced; merchant binding enforced.
+  5. Duplicate Order/payment creation prevented; webhook dedupe by `x-razorpay-event-id` before side effects; reconcile never creates orders.
+  6. Gemini never receives Razorpay credentials, never authorizes money, cannot widen limits or override deterministic policy. Judge payload never contains catalog `description`.
+  7. Every failure path fails closed (LLM error, schema error, API error → STEP_UP or BLOCK, never ALLOW).
+VERIFICATION required: state for EACH finding whether it is CLAIMED / VERIFIED BY TEST / VERIFIED BY CODE INSPECTION / VERIFIED MANUALLY / NOT VERIFIED. Specifically judge whether the 59 tests prove the security properties or merely execute the code (look for tests that would still pass if the check were deleted). Also audit demo honesty: every id, metric and claim in `README.md` / `docs/SUBMISSION.md` / `docs/DEMO_SCRIPT.md` must trace to a real artifact — flag anything that cannot.
+EXPECTED EVIDENCE: findings appended to the `## Findings` section of `docs/AGENTS.md` with severity / discovered-by / date / location / status / short explanation. Do not edit `src/`. Do not rerun the 240-case eval (quota).
+KNOWN RISKS: the two deferred issues D1/D2 in `docs/AGENTS.md` are already accepted — re-reporting them is noise; challenge the *reasoning* only if you think the severity judgement is wrong.
+HUMAN CHECKPOINT: none for the audit itself. Any finding you rate HIGH on the money path blocks the public push and comes back to opus-think for triage → opusCode.
+
 ### Builder reporting format (append per task to Decisions log)
 `2026-09-05 Builder Bn: <what changed> | tests: <n passed> | invariant grep: clean | evidence: <ids/output lines>`
 
