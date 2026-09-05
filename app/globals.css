@@ -447,31 +447,34 @@ a {
   padding: 96px 0 56px;
 }
 
-/* T4 — centre-clear / edge-dense texture, ≤8% ink, hero only. */
-.hero__texture {
-  position: absolute;
-  inset: 0;
-  overflow: hidden;
-  pointer-events: none;
-  user-select: none;
-  z-index: 0;
+/* The system trace — seven real architecture stages, state-coloured. Sits
+   below the console: explanatory content, not atmosphere. */
+.trace {
+  position: relative;
+  margin-top: 40px;
+  max-width: 760px;
+  display: flex;
+  align-items: baseline;
+  gap: 9px;
+  flex-wrap: wrap;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
 }
 
-.hero__texture-inner {
-  position: absolute;
-  top: 50%;
-  left: 50%;
-  transform: translate(-50%, -50%);
-  font-family: var(--font-mono);
-  font-size: 12px;
-  line-height: 1.55;
-  letter-spacing: 0.06em;
-  white-space: nowrap;
+.trace__item {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 9px;
+}
+
+.trace__node {
   color: var(--ink);
-  opacity: 0.075;
-  /* mask thins the field toward the centre so type sits on clean paper */
-  -webkit-mask-image: radial-gradient(ellipse 62% 74% at 44% 52%, transparent 30%, #000 100%);
-  mask-image: radial-gradient(ellipse 62% 74% at 44% 52%, transparent 30%, #000 100%);
+}
+
+.trace__sep {
+  color: var(--ink-faint);
 }
 
 .hero__foot {
@@ -1285,6 +1288,7 @@ a {
   height: 9px;
   border: 1px solid var(--ink-faint);
   flex: none;
+  transition: background var(--d-state) var(--e-state), border-color var(--d-state) var(--e-state);
 }
 
 .stage[data-lit="true"] .stage__dot {
@@ -1665,11 +1669,12 @@ a {
   .console__field {
     font-size: 18px;
   }
-  /* T4 is atmosphere, never at the cost of the sentence it sits behind. The
-     centre-clear mask is tuned for a wide type column; below that the field
-     crosses the thesis, so it thins out. */
-  .hero__texture-inner {
-    opacity: 0.045;
+  .trace {
+    font-size: 10px;
+    gap: 7px;
+  }
+  .trace__item {
+    gap: 7px;
   }
   .boundary--entry {
     height: 124px;
@@ -1705,11 +1710,6 @@ a {
   }
   .chip {
     min-width: 140px;
-  }
-  /* At phone widths the type column spans the full page: there is no edge left
-     for an edge-dense field to occupy without landing on the words. */
-  .hero__texture {
-    display: none;
   }
 }
 

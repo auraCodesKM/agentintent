@@ -233,6 +233,50 @@ export function boundaryState(decision: Decision | null): "idle" | "crossing" | 
 }
 
 /**
+ * The hero system trace. Seven fixed architecture nodes; each node's tone is a
+ * pure function of real, already-fetched state — never a timer, never a guess.
+ * "reached" nodes past the current stage keep their terminal tone; nodes ahead
+ * of it stay faint. This is the same backbone as product.md §1, just legible
+ * at a glance.
+ */
+export type TraceTone = "faint" | "neutral" | "ai" | "allow" | "stepup" | "block" | "exec"
+
+export interface TraceNode {
+  label: string
+  tone: TraceTone
+}
+
+export function deriveTraceNodes(
+  hasContract: boolean,
+  hasProposal: boolean,
+  hasCart: boolean,
+  decision: Decision | null,
+  hasOrder: boolean,
+  paymentStatus: string | null,
+): TraceNode[] {
+  const decisionTone: TraceTone = !decision
+    ? "faint"
+    : decision.decision === "ALLOW"
+      ? "allow"
+      : decision.decision === "STEP_UP"
+        ? "stepup"
+        : "block"
+
+  const paymentTone: TraceTone =
+    paymentStatus === "captured" ? "allow" : paymentStatus === "failed" ? "block" : hasOrder ? "exec" : "faint"
+
+  return [
+    { label: "user intent", tone: hasContract ? "neutral" : "faint" },
+    { label: "ai buyer", tone: hasProposal ? "ai" : "faint" },
+    { label: "untrusted proposal", tone: hasCart ? "ai" : "faint" },
+    { label: "l1 · l2 · l3 · l4", tone: decisionTone },
+    { label: "authorization boundary", tone: decisionTone },
+    { label: "razorpay", tone: hasOrder ? "exec" : "faint" },
+    { label: "payment", tone: paymentTone },
+  ]
+}
+
+/**
  * Deterministic glyph field (T1). Seeded by (row, col) — never Math.random() —
  * so it is stable across re-renders and never flickers.
  */

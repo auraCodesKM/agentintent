@@ -6,7 +6,7 @@
 
 import { useCallback, useEffect, useRef, useState } from "react"
 import { Masthead, StatusStrip } from "./components/Chrome"
-import { HeroField, TrustBoundary } from "./components/TrustBoundary"
+import { SystemTrace, TrustBoundary } from "./components/TrustBoundary"
 import { BuyerTrace, ContractChips, ProposedCart } from "./components/Untrusted"
 import { AuthorizationPlate, DecisionPlate, LayerRail } from "./components/Gateway"
 import { ExecutionAbsent, ExecutionHeld, RazorpayZone } from "./components/Execution"
@@ -14,6 +14,7 @@ import { AuditLedger, EvidenceStrip } from "./components/Evidence"
 import {
   boundaryState,
   deriveCart,
+  deriveTraceNodes,
   type AuditEvent,
   type Contract,
   type Decision,
@@ -22,6 +23,9 @@ import {
   type ReconcileResult,
   type TranscriptEntry,
 } from "./lib"
+
+const MAX_ORDER_POLLS = 40
+const ORDER_POLL_MS = 2500
 
 const PRESETS: [string, string][] = [
   ["legitimate", "Buy me a pair of good noise-cancelling headphones under ₹8,000. One pair only. Prefer black."],
@@ -47,9 +51,12 @@ export default function DemoPage(): React.ReactElement {
   const [order, setOrder] = useState<OrderInfo | null>(null)
   const [approvalError, setApprovalError] = useState<string>("")
   const [approvedByMerchant, setApprovedByMerchant] = useState(false)
+  const [verifyingPayment, setVerifyingPayment] = useState(false)
+  const [pollExhausted, setPollExhausted] = useState(false)
 
   const boundaryRef = useRef<HTMLDivElement | null>(null)
   const hadDecision = useRef(false)
+  const orderRef = useRef<OrderInfo | null>(null)
 
   const refreshAudit = useCallback((id: string) => {
     fetch(`/api/audit/${id}`)
@@ -60,12 +67,19 @@ export default function DemoPage(): React.ReactElement {
 
   // Persisted order + payment state. Stage 3 of the Razorpay rail lights from
   // this record only — never from a checkout redirect or an optimistic guess.
+  // `verifyingPayment` is true for exactly the span of a real in-flight fetch.
   const refreshOrder = useCallback((orderId: string) => {
-    fetch(`/api/orders/${orderId}`)
+    setVerifyingPayment(true)
+    return fetch(`/api/orders/${orderId}`)
       .then((r) => (r.ok ? r.json() : null))
       .then((d: OrderInfo | null) => setOrder(d))
       .catch(() => undefined)
+      .finally(() => setVerifyingPayment(false))
   }, [])
+
+  useEffect(() => {
+    orderRef.current = order
+  }, [order])
 
   useEffect(() => {
     fetch("/api/eval/results")
@@ -76,9 +90,58 @@ export default function DemoPage(): React.ReactElement {
       .catch(() => undefined)
   }, [])
 
+  // Bounded, visibility-aware polling for the one thing a Razorpay redirect
+  // never proves by itself: whether the payment actually captured. Same
+  // endpoint as the one-shot refresh above — no new API, no websocket. Stops
+  // the moment persisted state reaches a terminal status, after MAX_ORDER_POLLS,
+  // or while the tab is hidden (it resumes immediately on focus/visible).
   useEffect(() => {
-    if (decision?.razorpay_order_id) refreshOrder(decision.razorpay_order_id)
-  }, [decision?.razorpay_order_id, refreshOrder])
+    const orderId = decision?.razorpay_order_id
+    if (!orderId) return
+    setPollExhausted(false)
+    let pollCount = 0
+    let interval: ReturnType<typeof setInterval> | null = null
+
+    const isTerminal = (): boolean => {
+      const status = orderRef.current?.payment?.status
+      return status === "captured" || status === "failed"
+    }
+    const stop = (): void => {
+      if (interval !== null) {
+        clearInterval(interval)
+        interval = null
+      }
+    }
+    const tick = (): void => {
+      if (isTerminal()) {
+        stop()
+        return
+      }
+      if (document.visibilityState !== "visible") return
+      if (pollCount >= MAX_ORDER_POLLS) {
+        setPollExhausted(true)
+        stop()
+        return
+      }
+      pollCount += 1
+      refreshOrder(orderId)
+      if (intentId) refreshAudit(intentId)
+    }
+
+    tick()
+    interval = setInterval(tick, ORDER_POLL_MS)
+    const onWake = (): void => {
+      if (document.visibilityState === "visible") tick()
+    }
+    document.addEventListener("visibilitychange", onWake)
+    window.addEventListener("focus", onWake)
+
+    return () => {
+      stop()
+      document.removeEventListener("visibilitychange", onWake)
+      window.removeEventListener("focus", onWake)
+    }
+  }, [decision?.razorpay_order_id, intentId, refreshOrder, refreshAudit])
 
   // The only automatic scroll on the page: when a decision actually arrives,
   // bring the boundary and the decision plate into one frame.
@@ -100,6 +163,7 @@ export default function DemoPage(): React.ReactElement {
     setOrder(null)
     setApprovalError("")
     setApprovedByMerchant(false)
+    setPollExhausted(false)
     try {
       setBusy("creating session...")
       const sess = (await (await fetch("/api/sessions", { method: "POST" })).json()) as {
@@ -216,6 +280,15 @@ export default function DemoPage(): React.ReactElement {
       : "38%"
   const exitState: typeof bstate = decision?.razorpay_order_id ? "crossing" : bstate
 
+  const traceNodes = deriveTraceNodes(
+    !!contract,
+    transcript.length > 0,
+    !!cart,
+    decision,
+    !!decision?.razorpay_order_id,
+    order?.payment?.status ?? null,
+  )
+
   return (
     <>
       <Masthead />
@@ -225,7 +298,6 @@ export default function DemoPage(): React.ReactElement {
         {/* ---------------------------------------------------- band 1 */}
         <section className="band" id="band-thesis">
           <div className="hero">
-            <HeroField />
             <div className="hero__inner">
               <p className="t-micro hero__kicker">01 — the problem</p>
 
@@ -272,6 +344,8 @@ export default function DemoPage(): React.ReactElement {
                   ))}
                 </div>
               </div>
+
+              <SystemTrace nodes={traceNodes} />
             </div>
             <div className="hero__foot">
               <div className="hero__foot-inner t-micro">
@@ -422,6 +496,8 @@ export default function DemoPage(): React.ReactElement {
                   reconcileResult={reconcileResult}
                   reconcileError={reconcileError}
                   onReconcile={reconcile}
+                  verifyingPayment={verifyingPayment}
+                  pollExhausted={pollExhausted}
                 />
               ) : decision?.decision === "BLOCK" ? (
                 <ExecutionAbsent />

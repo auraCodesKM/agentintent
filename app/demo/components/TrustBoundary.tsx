@@ -1,31 +1,44 @@
 "use client"
 
 import { useMemo } from "react"
-import { glyphAt, glyphWeight } from "../lib"
+import { glyphAt, glyphWeight, type TraceNode, type TraceTone } from "../lib"
 
 export type BoundaryState = "idle" | "crossing" | "sealed" | "awaiting"
 
+const TONE_CLASS: Record<TraceTone, string> = {
+  faint: "faint",
+  neutral: "",
+  ai: "is-ai",
+  allow: "is-allow",
+  stepup: "is-stepup",
+  block: "is-block",
+  exec: "is-exec",
+}
+
 /**
- * T4 — centre-clear / edge-dense texture, hero band only, ≤8% ink.
- * Same deterministic seed as the boundary, so the page has one texture, not two.
+ * The hero system trace — replaces the old decorative glyph backdrop with the
+ * one diagram that actually matters: the seven real stages a purchase moves
+ * through. Every node's colour is a pure function of already-fetched state
+ * (see deriveTraceNodes); nothing here runs on a timer. A node re-mounts
+ * (via its key) only when its tone changes, replaying the existing `.reveal`
+ * blur-in exactly once per real transition — reduced-motion collapses that to
+ * a plain fade via the global media query, same as everywhere else on the page.
  */
-export function HeroField(): React.ReactElement {
-  const rows = 26
-  const cols = 150
-  const field = useMemo(
-    () =>
-      Array.from({ length: rows }, (_, r) =>
-        Array.from({ length: cols }, (_, c) => glyphAt(r + 7, c + 3)).join(" "),
-      ),
-    [],
-  )
+export function SystemTrace({ nodes }: { nodes: TraceNode[] }): React.ReactElement {
   return (
-    <div className="hero__texture" aria-hidden="true">
-      <div className="hero__texture-inner">
-        {field.map((line, i) => (
-          <div key={i}>{line}</div>
-        ))}
-      </div>
+    <div className="trace" aria-live="off">
+      {nodes.map((n, i) => (
+        <span className="trace__item" key={`item-${i}`}>
+          <span key={`${n.label}:${n.tone}`} className={`trace__node reveal ${TONE_CLASS[n.tone]}`}>
+            {n.label}
+          </span>
+          {i < nodes.length - 1 && (
+            <span className="trace__sep" aria-hidden="true">
+              →
+            </span>
+          )}
+        </span>
+      ))}
     </div>
   )
 }

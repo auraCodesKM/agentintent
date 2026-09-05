@@ -17,6 +17,8 @@ export function RazorpayZone({
   reconcileResult,
   reconcileError,
   onReconcile,
+  verifyingPayment,
+  pollExhausted,
 }: {
   decision: Decision
   order: OrderInfo | null
@@ -25,12 +27,15 @@ export function RazorpayZone({
   reconcileResult: ReconcileResult | null
   reconcileError: string
   onReconcile: () => void
+  verifyingPayment: boolean
+  pollExhausted: boolean
 }): React.ReactElement | null {
   const orderId = decision.razorpay_order_id
   if (!orderId) return null
 
   const payment = order?.payment ?? null
   const paid = payment?.status === "captured"
+  const failed = payment?.status === "failed"
   const types = new Set(auditEvents.map((e) => e.event_type))
 
   const chain: string[] = []
@@ -80,18 +85,39 @@ export function RazorpayZone({
         <div className="stage" data-lit={paid ? "true" : "false"}>
           <span className="stage__n t-micro">stage 03</span>
           <div className="stage__name">
-            <span className="stage__dot" />
+            <span
+              className="stage__dot"
+              style={
+                paid
+                  ? { background: "var(--allow)", borderColor: "var(--allow)" }
+                  : failed
+                    ? { background: "var(--block)", borderColor: "var(--block)" }
+                    : undefined
+              }
+            />
             Payment captured
           </div>
-          <div className="stage__value">
-            {payment ? (
-              <span className={`id ${paid ? "is-exec" : ""}`}>{payment.razorpay_payment_id}</span>
+          {/* Re-keyed on status so a real capture/failure remounts and replays
+              the existing .reveal blur-in exactly once — never on a timer. */}
+          <div className="stage__value reveal" key={payment?.status ?? "none"}>
+            {paid ? (
+              <span className="id is-allow">{payment?.razorpay_payment_id}</span>
+            ) : failed ? (
+              <span className="is-block">PAYMENT FAILED</span>
+            ) : verifyingPayment ? (
+              <span className="status-text">VERIFYING PAYMENT…</span>
+            ) : payment ? (
+              <span className="muted">PENDING · {payment.status}</span>
             ) : (
-              <span className="muted">NOT CAPTURED</span>
+              <span className="muted">AWAITING PAYMENT</span>
             )}
           </div>
           <div className="stage__meta t-micro">
-            {payment ? `status ${payment.status} · persisted, not assumed` : "no persisted payment record"}
+            {payment
+              ? `status ${payment.status} · persisted, not assumed`
+              : pollExhausted
+                ? "auto-check stopped — use recover via api poll below, or reopen checkout"
+                : "no persisted payment record yet · checking automatically"}
           </div>
         </div>
       </div>
