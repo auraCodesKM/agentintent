@@ -223,6 +223,36 @@ describe("decide.ts authorization boundary", () => {
     expect(await prisma.razorpayOrder.count({ where: { intentId } })).toBe(0)
   })
 
+  it("C2b: approveStepUp rejects a STEP_UP whose parent session's merchantId no longer matches the intent (F9)", async () => {
+    judgeCartMock.mockResolvedValue({ match: true, confidence: 0.6, violated_constraints: [], reason: "unsure" })
+    const { intentId, sessionId } = await makeIntent({ max_amount: 8000, max_quantity: 1, allowed_categories: ["headphones"] })
+
+    const cart = await proposeCart(intentId, [{ sku: "HP-004", quantity: 1 }])
+    const stepUp = await requestCheckout(intentId, cart.cartId)
+    expect(stepUp.decision).toBe("STEP_UP")
+
+    // Session still ACTIVE and not expired, but rebound to a different
+    // merchant than the one stamped on the intent at creation. merchantId has
+    // an FK to Merchant, so the other merchant must actually exist.
+    await prisma.merchant.upsert({
+      where: { id: "other_store" },
+      update: {},
+      create: { id: "other_store", name: "Other Store" },
+    })
+    await prisma.session.update({ where: { id: sessionId }, data: { merchantId: "other_store" } })
+
+    await expect(approveStepUp(stepUp.authorization_id!)).rejects.toThrow(ApprovalError)
+    await expect(approveStepUp(stepUp.authorization_id!)).rejects.toMatchObject({
+      code: "AUTHORIZATION_NOT_APPROVABLE",
+    })
+    expect(createOrderMock).not.toHaveBeenCalled()
+
+    const auth = await prisma.authorizationDecision.findUnique({ where: { id: stepUp.authorization_id! } })
+    expect(auth?.status).toBe("STEP_UP") // untouched — rejection happens before the APPROVED write
+
+    expect(await prisma.razorpayOrder.count({ where: { intentId } })).toBe(0)
+  })
+
   // ---- C1 (finding F5): CONCURRENT single-use enforcement ----
   //
   // HONESTY NOTE — read before trusting these two tests. They fire the calls

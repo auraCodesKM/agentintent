@@ -215,11 +215,18 @@ export async function approveStepUp(authorizationId: string): Promise<CheckoutDe
   // approvable into a real Order. Reuses the same helper requestCheckout's
   // inline check is equivalent to — do not duplicate the status/expiry
   // logic here.
+  let session: { id: string; merchantId: string }
   try {
-    await requireActiveSession(intent.session_id)
+    session = await requireActiveSession(intent.session_id)
   } catch (err) {
     if (err instanceof SessionError) throw new ApprovalError("AUTHORIZATION_NOT_APPROVABLE")
     throw err
+  }
+  // F9: requestCheckout's L1 also enforces merchant binding
+  // (session.merchantId !== intent.merchant_id -> MERCHANT_MISMATCH);
+  // approveStepUp must not skip it either.
+  if (session.merchantId !== intent.merchant_id) {
+    throw new ApprovalError("AUTHORIZATION_NOT_APPROVABLE")
   }
 
   if (isIntentExpired(intent, new Date())) throw new ApprovalError("INTENT_EXPIRED")
